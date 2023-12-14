@@ -4,6 +4,7 @@ import os
 from ekpy.control import core
 from ekpy.control.instruments import keysight81150a, keysightdsox3024a
 from scipy import interpolate
+import scipy.integrate as it
 
 def pv_hysteresis_wf(initial_delay, freq, pulse_delay, voltage, qtimepoints=12):
 	#first build Qtime
@@ -92,6 +93,17 @@ def setup_wavegen(wavegen, voltage_channel, initial_delay, freq, pulse_delay, vo
     keysight81150a.configure_arb_waveform(wavegen, voltage_channel, 'PV', gain=f'{voltage*2}', freq=f'{waveform_freq}')
     return q_time_arr
 
+def find_index(some_array, some_value):
+	'''
+	Helper Function to return both the array index and the value associated with that index
+	'''
+	diff_array = np.abs(some_array - some_value)
+	index_of_closest_value = np.argmin(diff_array)
+	closest_value = some_array[index_of_closest_value]
+	return index_of_closest_value, closest_value
+
+
+
 def run_function(scope, wavegen, initial_delay, pulse_delay, freq, v_end, 
 				 capacitor_area, thickness, permittivity, amplification, 
 				 loop_count:str='1', voltage_channel:str='1', current_channel:str='2'):
@@ -104,7 +116,7 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, v_end,
 		scope (pyvisa.resources.gpib.GPIBInstrument): Keysight DSOX3024A
 		initial_delay (str): Intial delay in seconds
 		pulse_delay (str): Same as Tdelay in seconds
-		freq (str): Frequency, assumed in Hz unless a suffix is used (need to add logic)
+		freq (str): Frequency, assumed in kHz unless a suffix is used (need to add logic)
         v_end (str): Voltage in units of volts (for vertical scale of osc), gets divided by 4 to scale voltage/div. Is later divided by loop_count to get the voltage step for each subsequent loop.
 		capacitor_area (str): In units of m^2 use scientific notation (maybe add logic for suffixes)
 		thickness (str): In units of m use scientific notation
@@ -137,7 +149,33 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, v_end,
 		#NOW we actually take the data, send out the pulse and get the data, f labview for this part
 		#First need to make sure the scope is ready to acquire
         keysightdsox3024a.setup_acquire(scope, type='NORM')
-        keysightdsox3024a.setup_wf(scope, source='CHAN1')
+		#Now we need to enable the wavegen, then acquire the data
+        keysight81150a.enable_output(wavegen)
+        time.sleep(.1) #Note may need to digitize to ensure that I am getting the same stuff at the same time
+        keysightdsox3024a.setup_wf(scope, source='CHAN1', points='1000')
+        metadata_v, time_v, wfm_v = keysightdsox3024a.query_wf(scope)
+        keysightdsox3024a.setup_wf(scope, source='CHAN2', points='1000')
+        metadata_c, time_c, wfm_c = keysightdsox3024a.query_wf(scope)
+        '''
+		#Now we calculcate the offset in the waveforms sike this is useless i believe since my awesome command already scales it
+        null_element_amount = len(wfm_c)/(total_time/np.float(initial_delay))
+        null_sum_c = np.sum(wfm_c[:null_element_amount]) #truncates waveform to this many elements and sums elements
+        offset_c = (null_sum_c/null_element_amount)*-1/50 #I have no idea what this is doing but okay'''
+		#Now we need to integrate current to get charge Q
+        wfm_q = it.cumulative_trapezoid(wfm_c, time_c, initial=metadata_c["x_origin"]) #not sure if this is correct, but makes sense since x_origin is t0
+        q_arr = []
+        index_arr = []
+        nearest_value_arr = []
+        scaled_cap = 100/capacitor_area
+        wfm_q_scaled = wfm_q*scaled_cap
+        for i in q_time_arr:
+            index, closest_val = find_index(time_c - metadata_c['x_origin'], i)
+            index_arr.append(index)
+            nearest_value_arr.append(closest_val)
+            q_arr.append(wfm_q_scaled[index])
+        
+            
+        
 
 
 class FEHysteresis(core.experiment):

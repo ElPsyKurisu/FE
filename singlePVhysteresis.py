@@ -5,6 +5,7 @@ from ekpy.control import core
 from ekpy.control.instruments import keysight81150a, keysightdsox3024a
 from scipy import interpolate
 import scipy.integrate as it
+import pandas as pd
 
 def pv_hysteresis_wf(initial_delay, freq, pulse_delay, voltage, qtimepoints=12):
 	#first build Qtime
@@ -134,10 +135,14 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, v_end,
 		notes:
 		basicaly just calculate capacitance of sample from basic formula"""
     #First Initialize the Oscilloscope and setup for measurement
+    capacitance = np.float(capacitor_area)*np.float(permittivity)*8.854e-12/np.float(thickness)
+    current_chnnl_resolution = capacitance*50*np.float(amplification)
+    if current_chnnl_resolution < 0.008:
+        current_chnnl_resolution = 0.008
     timescale = (np.float(initial_delay) + (np.float(pulse_delay) * 4) + (16 * np.float(freq) * 4000)) / 10
     voltage_channel_scale = np.float(v_end)/4
 	#make sure that current scale >= 0.008
-    setup_scope(scope, initial_delay, pulse_delay, freq, voltage_channel, current_channel, f'{voltage_channel_scale}', '0.008')
+    setup_scope(scope, initial_delay, pulse_delay, freq, voltage_channel, current_channel, f'{voltage_channel_scale}', f'{current_chnnl_resolution}')
 
     #Now we initialize the wavegen
     keysight81150a.initialize(wavegen)
@@ -211,7 +216,31 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, v_end,
 		#All thats left do to is write all the data to files which is split into RAW and PV
 		#TBH THIS WILL ERROR MOST LIKELY SINCE MY ARRAYS ARE OF DIFFERENT SIZES AND I AM CONCAT MIGHT NEED TO LIKE MAKE A COPY AND APPEND ETC
 		#pv_hyst[0] is x to plot, and pv_hyst[1] is y to plot which is the data i wanna write
+		#all data should be returned as a pandas df apparently ((str) base_name, (dict) meta_data, (pandas.dataframe) data) like so
+		#so we should build metadata here, where I want it to be contained with both scan params, but also include entire scope meta_data
+        exp_params_meta_data = {
+			'capacitance':capacitance,
+			'initial_delay': initial_delay,
+			'pulse_delay': pulse_delay,
+			'frequency': freq,
+			'v_end': v_end,
+			'amplification': amplification,
+			'loop_count': loop_count,
+		}
+        meta_data = {'exp_params': exp_params_meta_data, 'scope_c': metadata_c, 'scope_v': metadata_v}
+		#How to structure the data that comes out, its going to be in a pandas df, but how. Kind of want to make it nested with raw and pv but idk
+        df_pv_hyst = pd.DataFrame(pv_hyst)
+        df_pv_p = pd.DataFrame([pv_p1,pv_p2,pv_p3,pv_p4])
+        df_raw = pd.DataFrame([time_v,wfm_v,time_c,wfm_c, wfm_q, wfm_q_scaled])
+        df = pd.DataFrame([df_pv_hyst,df_pv_p,df_raw])
+        """
+        Note that the v_waveform is plotted raw, just how he gets it so I would plot basically what the scope gives me aka wfm_v vs time_v
+		I(t) is also raw like we saw
+		then Q(t) is also raw, aka not the scaled one we did so plot the wfm_q!
+		"""
 
+        base_name = 'fe_pv_'
+        return base_name, meta_data, df
 
 class FEHysteresis(core.experiment):
 	"""Experiment class for running creating hysteresis loops of PV. 

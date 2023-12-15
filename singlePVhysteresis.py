@@ -177,6 +177,9 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, v_end,
             index_arr.append(index)
             nearest_value_arr.append(closest_val)
             q_arr.append(wfm_q_scaled[index])
+        q_arr = np.array(q_arr) #convert to array to allow for subtracting
+        index_arr = np.array(index_arr)
+        nearest_value_arr = np.array(nearest_value_arr)
         #Now we want to calculate PV P1, PV P2, PV P3, PV P4, PV hysteresis
         p1_length = index_arr[2] - index_arr[0]
         p2_length = index_arr[5] - index_arr[3]
@@ -185,7 +188,7 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, v_end,
         pos_half_length = index_arr[11] - index_arr[10]
         neg_half_length = index_arr[5] - index_arr[4]
         #note v is not scaled but Q is for the next part
-        q1 = wfm_q_scaled[0:p1_length] 
+        q1 = wfm_q_scaled[0:p1_length]
         q2 = wfm_q_scaled[3:p2_length]
         q3 = wfm_q_scaled[6:p3_length]
         q4 = wfm_q_scaled[9:p4_length]
@@ -197,12 +200,17 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, v_end,
         v4 = wfm_v[9:p4_length]
         vpos = wfm_v[10:pos_half_length]
         vneg = wfm_v[4:neg_half_length]
-        pv_p1 = [v1, q1 - max_min_div2(q1)]
-        pv_p2 = [v2, q2 - max_min_div2(q2)]
-        pv_p3 = [v3, q3 - max_min_div2(q3)]
-        pv_p4 = [v4, q4 - max_min_div2(q4)]
-        
-
+        pv_p1 = np.concatenate((v1, q1 - max_min_div2(q1)))
+        pv_p2 = np.concatenate((v2, q2 - max_min_div2(q2)))
+        pv_p3 = np.concatenate((v3, q3 - max_min_div2(q3)))
+        pv_p4 = np.concatenate((v4, q4 - max_min_div2(q4)))
+        temporary = vneg - q_arr[4]
+        temp2 = vpos - q_arr[10] + temporary[-1]
+        temp_arr = np.concatenate((temporary, temp2))
+        pv_hyst = [np.concatenate([vneg, vpos]), [temp_arr - max_min_div2(temp_arr)]] #list of arrays!
+		#All thats left do to is write all the data to files which is split into RAW and PV
+		#TBH THIS WILL ERROR MOST LIKELY SINCE MY ARRAYS ARE OF DIFFERENT SIZES AND I AM CONCAT MIGHT NEED TO LIKE MAKE A COPY AND APPEND ETC
+		#pv_hyst[0] is x to plot, and pv_hyst[1] is y to plot which is the data i wanna write
 
 
 class FEHysteresis(core.experiment):

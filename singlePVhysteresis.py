@@ -102,7 +102,11 @@ def find_index(some_array, some_value):
 	closest_value = some_array[index_of_closest_value]
 	return index_of_closest_value, closest_value
 
-
+def max_min_div2(arr):
+	"""
+	Helper function to simply do (max + min) /2 of an array
+	"""
+	return (np.max(arr) + np.min(arr))/2
 
 def run_function(scope, wavegen, initial_delay, pulse_delay, freq, v_end, 
 				 capacitor_area, thickness, permittivity, amplification, 
@@ -173,9 +177,32 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, v_end,
             index_arr.append(index)
             nearest_value_arr.append(closest_val)
             q_arr.append(wfm_q_scaled[index])
+        #Now we want to calculate PV P1, PV P2, PV P3, PV P4, PV hysteresis
+        p1_length = index_arr[2] - index_arr[0]
+        p2_length = index_arr[5] - index_arr[3]
+        p3_length = index_arr[8] - index_arr[6]
+        p4_length = index_arr[11] - index_arr[9]
+        pos_half_length = index_arr[11] - index_arr[10]
+        neg_half_length = index_arr[5] - index_arr[4]
+        #note v is not scaled but Q is for the next part
+        q1 = wfm_q_scaled[0:p1_length] 
+        q2 = wfm_q_scaled[3:p2_length]
+        q3 = wfm_q_scaled[6:p3_length]
+        q4 = wfm_q_scaled[9:p4_length]
+        qpos = wfm_q_scaled[10:pos_half_length]
+        qneg = wfm_q_scaled[4:neg_half_length]
+        v1 = wfm_v[0:p1_length]
+        v2 = wfm_v[3:p2_length]
+        v3 = wfm_v[6:p3_length]
+        v4 = wfm_v[9:p4_length]
+        vpos = wfm_v[10:pos_half_length]
+        vneg = wfm_v[4:neg_half_length]
+        pv_p1 = [v1, q1 - max_min_div2(q1)]
+        pv_p2 = [v2, q2 - max_min_div2(q2)]
+        pv_p3 = [v3, q3 - max_min_div2(q3)]
+        pv_p4 = [v4, q4 - max_min_div2(q4)]
         
-            
-        
+
 
 
 class FEHysteresis(core.experiment):

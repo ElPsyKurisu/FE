@@ -9,10 +9,10 @@ import pandas as pd
 
 def pv_hysteresis_wf(initial_delay, freq, pulse_delay, voltage, qtimepoints=12):
 	#first build Qtime
-	initial_delay = np.float(initial_delay)
-	freq = np.float(freq)
-	pulse_delay = np.float(pulse_delay)
-	voltage = np.float(voltage)
+	initial_delay = float(initial_delay)
+	freq = float(freq)
+	pulse_delay = float(pulse_delay)
+	voltage = float(voltage)
 	q_time = []
 	t_increment = 0.0005/freq
 	sumsofar = initial_delay
@@ -49,13 +49,13 @@ def pv_hysteresis_wf(initial_delay, freq, pulse_delay, voltage, qtimepoints=12):
 	#Now we calculate the interpolated time [This is a dumb method probably way easier way to do it]
 	interp_time = []
 	interp_time.append(0)
-	iteration_count = 10000
+	iteration_count = 10000 - 1
 	for i in range(iteration_count):
 		interp_time.append((i + 1) * (time_array[-1]/iteration_count))
 	#note this was the same shit as doing like np.linearinterpolate or linspace with max being the last element
 
 	#Now we make a voltage array
-	voltage_array = voltage*[0,1,-1,0,1,-1,0,-1,1,0,-1,1,0]
+	voltage_array = voltage*np.array([0,0,1,-1,0,0,1,-1,0,0,-1,1,0,0,-1,1,0,0])
 	temp = interpolate.interp1d(time_array, voltage_array)
 	interp_voltage_array = temp(interp_time)
 	#only thing we use from this is interp_voltage_array wtf
@@ -67,19 +67,21 @@ def setup_scope(scope, initial_delay, pulse_delay, freq, voltage_channel, curren
 	#Note this is made copying from LabVIEW, current order of arguments do not make sense imo
     keysightdsox3024a.initialize(scope)
     time.sleep(1)
-    timescale = (np.float(initial_delay) + (np.float(pulse_delay) * 4) + (16 * np.float(freq) * 4000)) / 10 #Taken from LabVIEW idk what it does really
+    timescale = (float(initial_delay) + (float(pulse_delay) * 4) + (16 * (1/(float(freq) * 4000)))) / 10 
+    #Taken from LabVIEW idk what it does really
     keysightdsox3024a.configure_timebase(scope, time_base_type='MAIN', reference='CENTer', scale=f'{timescale}', position=f'{timescale}') #WHY is position not at 0?? its wired in labivew to same as scale
     #configure the voltage channel
-    keysightdsox3024a.configure_channel(voltage_channel, vertical_scale=voltage_scale, impedance='ONEM')
+    keysightdsox3024a.configure_channel(scope, channel=voltage_channel, vertical_scale=voltage_scale, impedance='ONEM')
     time.sleep(1)
     #configure the current channel
-    keysightdsox3024a.configure_channel(current_channel, vertical_scale=current_scale, impedance='FIFT')
+    keysightdsox3024a.configure_channel(scope, channel=current_channel, vertical_scale=current_scale, impedance='FIFT')
     time.sleep(1)
     #configure the time scale for voltage channel
-    keysightdsox3024a.configure_scale(scope, voltage_channel, timescale, voltage_scale)
+    keysightdsox3024a.configure_scale(scope, channel=voltage_channel, time_scale=f'{timescale}', vertical_scale=voltage_scale)
 	#Setup Trigger Settings
     keysightdsox3024a.configure_trigger_characteristics(scope, trigger_source='EXT', low_voltage_level='0.75', high_voltage_level='0.95', sweep='NORM')
     keysightdsox3024a.configure_trigger_edge(scope, trigger_source='EXT', input_coupling='DC')
+
 	
 
 def setup_wavegen(wavegen, voltage_channel, initial_delay, freq, pulse_delay, voltage):
@@ -135,39 +137,59 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, v_end,
 		notes:
 		basicaly just calculate capacitance of sample from basic formula"""
     #First Initialize the Oscilloscope and setup for measurement
-    capacitance = np.float(capacitor_area)*np.float(permittivity)*8.854e-12/np.float(thickness)
-    current_chnnl_resolution = capacitance*50*np.float(amplification)
+    capacitance = float(capacitor_area)*float(permittivity)*8.854e-12/float(thickness)
+    current_chnnl_resolution = capacitance*50*float(amplification)
     if current_chnnl_resolution < 0.008:
         current_chnnl_resolution = 0.008
-    timescale = (np.float(initial_delay) + (np.float(pulse_delay) * 4) + (16 * np.float(freq) * 4000)) / 10
-    voltage_channel_scale = np.float(v_end)/4
+    timescale = (float(initial_delay) + (float(pulse_delay) * 4) + (16 * float(freq) * 4000)) / 10
+    voltage_channel_scale = float(v_end)/4
 	#make sure that current scale >= 0.008
     setup_scope(scope, initial_delay, pulse_delay, freq, voltage_channel, current_channel, f'{voltage_channel_scale}', f'{current_chnnl_resolution}')
-
-    #Now we initialize the wavegen
+    print("setup scope worked") #note undefined header, so we are setting up wrong
+    #Now we initialize the wavegen works up TO HERE BTW!
     keysight81150a.initialize(wavegen)
 	
     #Loop over the loop count
-    voltage_step = np.float(v_end)/np.int(loop_count)
-    for i in range(len(np.int(loop_count))):
+    voltage_step = float(v_end)/int(loop_count)
+    for i in range(int(loop_count)):
         voltage = (i+1)*voltage_step
         #first we need to setup the wavegen
         q_time_arr = setup_wavegen(wavegen, voltage_channel, initial_delay, freq, pulse_delay, voltage)
-        total_time = 0.004/np.float(freq) + (np.float(pulse_delay) * 4) + np.float(initial_delay)
-
+        total_time = 0.004/float(freq) + (float(pulse_delay) * 4) + float(initial_delay)
+        print("setup wavegen worked")
 		#NOW we actually take the data, send out the pulse and get the data, f labview for this part
 		#First need to make sure the scope is ready to acquire
-        keysightdsox3024a.setup_acquire(scope, type='NORM')
+        #keysightdsox3024a.setup_acquire(scope, type='NORM') skip this for now
+        print(keysightdsox3024a.error_query(scope), 'setup_acquire')
+		#now we add in the part where we initiate
+        #keysightdsox3024a.initiate(scope) #trying again
+        scope.write(":DIG") #this errors I believe, since we get nothing past this
+        scope.write("*CLS")
+        #print(keysightdsox3024a.error_query(scope), 'initiate')
 		#Now we need to enable the wavegen, then acquire the data
         keysight81150a.enable_output(wavegen)
+        time.sleep(0.5)
+        print("enabled output") #note i made it to here, also never sent out the software trigger
+        keysight81150a.send_software_trigger(wavegen)
+        time.sleep(0.5)
+        print("skipped trig successfully") #errors after this atm, will check later 10:15pm fuck this
+		#Really do wanna change the below setup with an OPC?
+        #keysightdsox3024a.wait_for_acq_complete(scope) #this timed out, which is no bueno
+        print("before error query")
+        print(keysightdsox3024a.error_query(scope), 'wait_for_acq')
         time.sleep(.1) #Note may need to digitize to ensure that I am getting the same stuff at the same time
+        print("made it past acquire")
         keysightdsox3024a.setup_wf(scope, source='CHAN1', points='1000')
-        metadata_v, time_v, wfm_v = keysightdsox3024a.query_wf(scope)
+        print(keysightdsox3024a.error_query(scope), 'setup_wf1')
+        metadata_v, time_v, wfm_v = keysightdsox3024a.query_wf(scope) #currently times out here
+        print("made it past the first query part")
+        time.sleep(5)
         keysightdsox3024a.setup_wf(scope, source='CHAN2', points='1000')
         metadata_c, time_c, wfm_c = keysightdsox3024a.query_wf(scope)
+        print(keysightdsox3024a.error_query(scope), 'setup_wf2')
         '''
 		#Now we calculcate the offset in the waveforms sike this is useless i believe since my awesome command already scales it
-        null_element_amount = len(wfm_c)/(total_time/np.float(initial_delay))
+        null_element_amount = len(wfm_c)/(total_time/float(initial_delay))
         null_sum_c = np.sum(wfm_c[:null_element_amount]) #truncates waveform to this many elements and sums elements
         offset_c = (null_sum_c/null_element_amount)*-1/50 #I have no idea what this is doing but okay'''
 		#Now we need to integrate current to get charge Q
@@ -255,8 +277,8 @@ class FEHysteresis(core.experiment):
 
 	"""
 
-	def __init__(self, wavegen, scope, run_function= run_function):
-		super().__init__()
+	def __init__(self, wavegen, scope, run_function=run_function):
+		super().__init__(run_function)
 		self.run_function = run_function
 		self.wavegen = wavegen
 		self.scope = scope

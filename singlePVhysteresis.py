@@ -197,7 +197,7 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, v_end,
         q_arr = []
         index_arr = []
         nearest_value_arr = []
-        scaled_cap = 100/capacitor_area
+        scaled_cap = 100/float(capacitor_area)
         wfm_q_scaled = wfm_q*scaled_cap
         for i in q_time_arr:
             index, closest_val = find_index(time_c - metadata_c['x_origin'], i)

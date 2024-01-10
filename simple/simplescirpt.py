@@ -18,7 +18,7 @@ keysightdsox3024a.initialize(scope)
 
 keysight81150a.initialize(wavegen)
 keysight81150a.configure_impedance(wavegen, '1', source_impedance='50.0', load_impedance='1000000')
-keysight81150a.configure_arb_waveform(wavegen, '1', 'PV', gain='2', freq='1000') #note should be volatile idk why, but sure and i need to create the wf
+keysight81150a.configure_arb_wf(wavegen, '1', 'PV', gain='2', freq='1000') #note should be volatile idk why, but sure and i need to create the wf
 keysight81150a.enable_output(wavegen)
 
 scope.write(":AUToscale")

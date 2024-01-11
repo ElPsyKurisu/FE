@@ -1,6 +1,10 @@
 '''
 This is an even simple script which will simply autoscale the scope but will allow us to make our 
 OWN arb wf. currently it just takes in a hard coded list
+This program does not trigger from the send trigger stuff form the wavegen, which autoscale is giving us twice our signal
+lol i think i forgot we need to setup the impedance of the scope, so going to copy that from my bigger program
+will need to remove autoscale functionality and manually scale all of it. lets focus now on getting it to trig based on sending a trig
+from the wavegen
 '''
 
 from ekpy import control
@@ -78,23 +82,29 @@ time.sleep(3)
 
 keysightdsox3024a.initialize(scope)
 
+#configure the voltage channel
+keysightdsox3024a.configure_channel(scope, channel='1', vertical_scale='4', impedance='ONEM') #im guessing for the scale
+time.sleep(1)
+#configure the current channel
+keysightdsox3024a.configure_channel(scope, channel='2', vertical_scale='0.008', impedance='FIFT')
+time.sleep(1)
+#i am hoping autoscaling it later doesnt affect the impedance
 keysight81150a.initialize(wavegen)
 keysight81150a.configure_impedance(wavegen, '1', source_impedance='50.0', load_impedance='1000000')
 
-q_time_arr, time_array, waveform_freq, interp_time_arr, interp_voltage_array = pv_hysteresis_wf('0.0001', '10', '0.0001', '1')
+q_time_arr, time_array, waveform_freq, interp_time_arr, interp_voltage_array = pv_hysteresis_wf('5E-5', '10', '5E-6', '1')
 keysight81150a.create_arb_wf(wavegen, interp_voltage_array)
 
 keysight81150a.configure_arb_wf(wavegen, '1', 'VOLATILE', gain='2', freq='1000') #note should be volatile idk why, but sure and i need to create the wf
 keysight81150a.enable_output(wavegen)
 
 scope.write(":AUToscale")
-time.sleep(3)
+time.sleep(2)
 
 scope.write(":WAVeform:SOURce 1")
 meta_data_v, time_v, wfm_v = keysightdsox3024a.query_wf(scope)
 scope.write(":WAVeform:SOURce 2")
 metadata_c, time_c, wfm_c = keysightdsox3024a.query_wf(scope)
-
 mydata = [meta_data_v, time_v, wfm_v, metadata_c, time_c, wfm_c]
 
 #NOW we want to get the charge and stuff and calulate the FE. going to copy paste from old code to see if it works :D
@@ -150,7 +160,6 @@ v3 = wfm_v[6:p3_length]
 v4 = wfm_v[9:p4_length]
 vpos = wfm_v[10:pos_half_length]
 vneg = wfm_v[4:neg_half_length]
-print(q3, p3_length, index_arr, q1, q_time_arr) #taking last element for some reason
 pv_p1 = np.concatenate((v1, q1 - max_min_div2(q1)))
 pv_p2 = np.concatenate((v2, q2 - max_min_div2(q2)))
 pv_p3 = np.concatenate((v3, q3 - max_min_div2(q3)))
@@ -164,4 +173,7 @@ plt.plot(time_v, wfm_v)
 plt.title('Waveform')
 plt.xlabel('Time (sec)')
 plt.ylabel('Voltage (V)')
+
+#plt.plot(time_c, wfm_q)
+
 plt.show()

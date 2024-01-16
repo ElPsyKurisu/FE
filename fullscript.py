@@ -190,8 +190,12 @@ for i in range(int(loop_count)):
     pos_half_length = index_arr[11] - index_arr[10]
     neg_half_length = index_arr[5] - index_arr[4]
     #note v is not scaled but Q is for the next part
-    q1 = wfm_q_scaled[0:p1_length]
-    q2 = wfm_q_scaled[3:p2_length]
+    '''
+	NOTE this whole shit below is wrong, as it should not be starting from 0, or 3, or whatever its indexed by some other value
+	'''
+    '''
+    q1 = wfm_q_scaled[0:p1_length] #NOTE this is wrong, the array should be of length p1_length not up to that number lmfao so we need to do to 0 + p1_length
+    q2 = wfm_q_scaled[3:p2_length] #could also add in the plotting the points where we are starting q1, q2 etc so its clear
     q3 = wfm_q_scaled[6:p3_length]
     q4 = wfm_q_scaled[9:p4_length]
     qpos = wfm_q_scaled[10:pos_half_length]
@@ -202,6 +206,21 @@ for i in range(int(loop_count)):
     v4 = wfm_v[9:p4_length]
     vpos = wfm_v[10:pos_half_length]
     vneg = wfm_v[4:neg_half_length]
+	'''
+    #each of these q1 refer to the charge segment of the num pulse, aka q1 is the charge wf of the first pulse
+	#could really make this more readable, which i will refactor i believe to rename shit like index_arr[0] as pulse_1_start or something
+    q1 = wfm_q_scaled[index_arr[0]:index_arr[0]+p1_length]#this should be correct? need to check that the end condition is the same
+    q2 = wfm_q_scaled[index_arr[3]:index_arr[3]+p2_length]
+    q3 = wfm_q_scaled[index_arr[6]:index_arr[6]+p3_length]
+    q4 = wfm_q_scaled[index_arr[9]:index_arr[9]+p4_length]
+    qpos = wfm_q_scaled[index_arr[10]:index_arr[10]+pos_half_length]
+    qneg = wfm_q_scaled[index_arr[4]:index_arr[4]+neg_half_length]
+    v1 = wfm_v[index_arr[0]:index_arr[0]+p1_length]
+    v2 = wfm_v[index_arr[3]:index_arr[3]+p2_length]
+    v3 = wfm_v[index_arr[6]:index_arr[6]+p3_length]
+    v4 = wfm_v[index_arr[9]:index_arr[9]+p4_length]
+    vpos = wfm_v[index_arr[10]:index_arr[10]+pos_half_length]
+    vneg = wfm_v[index_arr[4]:index_arr[4]+neg_half_length]
     pv_p1 = np.concatenate((v1, q1 - max_min_div2(q1)))
     pv_p2 = np.concatenate((v2, q2 - max_min_div2(q2)))
     pv_p3 = np.concatenate((v3, q3 - max_min_div2(q3)))
@@ -211,10 +230,31 @@ for i in range(int(loop_count)):
     temp_arr = np.concatenate((temporary, temp2))
     pv_hyst = [np.concatenate([vneg, vpos]), temp_arr - max_min_div2(temp_arr)] #list of arrays!
 
+'''
+Now we build the points to plot where exactly we are sampling from to visually see if we are calculation the pulse lengths correctly, plot both ends with lengths added
+'''
+v_points_time_arr = [time_v[index_arr[0]], time_v[index_arr[3]], time_v[index_arr[6]], time_v[index_arr[9]], time_v[index_arr[10]], time_v[index_arr[4]]
+				   , time_v[index_arr[0]+p1_length], time_v[index_arr[3]+p2_length], time_v[index_arr[6]+p3_length], time_v[index_arr[9]+p4_length]
+				   , time_v[index_arr[10]+pos_half_length], time_v[index_arr[4]+neg_half_length]]
+
+c_points_time_arr = [time_c[index_arr[0]], time_c[index_arr[3]], time_c[index_arr[6]], time_c[index_arr[9]], time_c[index_arr[10]], time_c[index_arr[4]]
+				   , time_c[index_arr[0]+p1_length], time_c[index_arr[3]+p2_length], time_c[index_arr[6]+p3_length], time_c[index_arr[9]+p4_length]
+				   , time_c[index_arr[10]+pos_half_length], time_c[index_arr[4]+neg_half_length]]
+
+points_v_arr = [wfm_v[index_arr[0]], wfm_v[index_arr[3]], wfm_v[index_arr[6]], wfm_v[index_arr[9]], wfm_v[index_arr[10]], wfm_v[index_arr[4]]
+				   , wfm_v[index_arr[0]+p1_length], wfm_v[index_arr[3]+p2_length], wfm_v[index_arr[6]+p3_length], wfm_v[index_arr[9]+p4_length]
+				   , wfm_v[index_arr[10]+pos_half_length], wfm_v[index_arr[4]+neg_half_length]]
+
+points_q_arr = [wfm_q[index_arr[0]], wfm_q[index_arr[3]], wfm_q[index_arr[6]], wfm_q[index_arr[9]], wfm_q[index_arr[10]], wfm_q[index_arr[4]]
+				   , wfm_q[index_arr[0]+p1_length], wfm_q[index_arr[3]+p2_length], wfm_q[index_arr[6]+p3_length], wfm_q[index_arr[9]+p4_length]
+				   , wfm_q[index_arr[10]+pos_half_length], wfm_q[index_arr[4]+neg_half_length]]
+
 fig, ax = plt.subplots(4,1)
 
 ax[0].plot(time_v, wfm_v)
+ax[0].scatter(v_points_time_arr, points_v_arr, color='red')
 ax[1].plot(time_c, wfm_c)
 ax[2].plot(time_c, wfm_q)
+ax[2].scatter(c_points_time_arr, points_q_arr, color='red')
 ax[3].plot(pv_hyst[0], pv_hyst[1])
 plt.show()

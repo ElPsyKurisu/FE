@@ -112,7 +112,7 @@ def max_min_div2(arr):
 '''
 HERE I WILL INPUT ALL THE VARIABLE VALUES
 '''
-capacitor_area = '4e-8'
+capacitor_area = '4e-8' #4e-8
 permittivity = '30'
 thickness = '10e-9'
 amplification = '8'
@@ -131,8 +131,8 @@ wavegen = rm.open_resource('GPIB0::8::INSTR')
 
 capacitance = float(capacitor_area)*float(permittivity)*8.854e-12/float(thickness)
 current_chnnl_resolution = capacitance*50*float(amplification)
-if current_chnnl_resolution < 0.015: #changed from 0.008
-    current_chnnl_resolution = 0.050
+if current_chnnl_resolution < 0.008: #changed from 0.008
+    current_chnnl_resolution = 0.008
 time_scale = (float(initial_delay) + (float(pulse_delay) * 4) + (16 * (1/(float(freq) * 4000)))) / 10
 voltage_channel_scale = float(v_end)/4
 #make sure that current scale >= 0.008
@@ -209,7 +209,7 @@ for i in range(int(loop_count)):
 	'''
     #each of these q1 refer to the charge segment of the num pulse, aka q1 is the charge wf of the first pulse
 	#could really make this more readable, which i will refactor i believe to rename shit like index_arr[0] as pulse_1_start or something
-    q1 = wfm_q_scaled[index_arr[0]:index_arr[0]+p1_length]#this should be correct? need to check that the end condition is the same
+    q1 = wfm_q_scaled[index_arr[0]:index_arr[0]+p1_length]#this should be correct? need to check that the end condition is the same, think its good
     q2 = wfm_q_scaled[index_arr[3]:index_arr[3]+p2_length]
     q3 = wfm_q_scaled[index_arr[6]:index_arr[6]+p3_length]
     q4 = wfm_q_scaled[index_arr[9]:index_arr[9]+p4_length]
@@ -257,4 +257,13 @@ ax[1].plot(time_c, wfm_c)
 ax[2].plot(time_c, wfm_q)
 ax[2].scatter(c_points_time_arr, points_q_arr, color='red')
 ax[3].plot(pv_hyst[0], pv_hyst[1])
+
+fig2, ax2 = plt.subplots()
+ax2.plot(pv_hyst[0], pv_hyst[1])
+#just plot p1 hysteresis
+fig1, ax1 = plt.subplots()
+
+ax1.plot(pv_p1)
+keysight81150a.enable_output(wavegen, on=False)
+
 plt.show()

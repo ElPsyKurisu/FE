@@ -1,0 +1,4 @@
+capacitance,initial_delay,pulse_delay,frequency,waveform_freq,voltage,amplification,trial,filename
+1.0624799999999994e-09,5e-05,5e-06,10,2127.6595744680844,0.5,8,0,fe_pv__0.csv
+1.0624799999999996e-09,5e-05,5e-06,10,2127.6595744680844,1.0,8,0,fe_pv__1.csv
+1.0624799999999998e-09,5e-5,5e-6,10,2127.6595744680844,1.5,8,0,fe_pv__2.csv

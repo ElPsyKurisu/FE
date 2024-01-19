@@ -124,6 +124,8 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, voltage,
         
         notes:
         basicaly just calculate capacitance of sample from basic formula"""
+    #first we initialize the meta_data
+    meta_data = locals() #this just passes in all the arguments from the run function
     #NOTE I do not use current_chnnl_resolution at all in erics code
     capacitance = float(capacitor_area)*float(permittivity)*8.854e-12/float(thickness)
     current_chnnl_resolution = capacitance*50*float(amplification)
@@ -146,20 +148,12 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, voltage,
     scope.query("*OPC?")
     keysightdsox3024a.setup_wf(scope, source='CHAN1')
     metadata_v, time_v, wfm_v = keysightdsox3024a.query_wf(scope) #currently times out here
+    meta_data.update(metadata_v)
     time.sleep(.2)
     keysightdsox3024a.setup_wf(scope, source='CHAN2')
     metadata_c, time_c, wfm_c = keysightdsox3024a.query_wf(scope)
 
-    exp_params_meta_data = {
-            'capacitance':capacitance,
-            'initial_delay': initial_delay,
-            'pulse_delay': pulse_delay,
-            'frequency': freq,
-            'waveform_freq': waveform_freq,
-            'voltage': voltage,
-            'amplification': amplification,
-        }
-    meta_data = {'exp_params': exp_params_meta_data, 'scope_c': metadata_c, 'scope_v': metadata_v}
+    meta_data.update(metadata_c)
     #How to structure the data that comes out, its going to be in a pandas df, but how. Kind of want to make it nested with raw and pv but idk
     df = pd.DataFrame({'time_v':time_v, 'wfm_v':wfm_v, 'time_c':time_c, 'wfm_c':wfm_c})
     base_name = 'fe_pv_'

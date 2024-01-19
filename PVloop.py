@@ -126,6 +126,7 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, voltage,
         basicaly just calculate capacitance of sample from basic formula"""
     #first we initialize the meta_data
     meta_data = locals() #this just passes in all the arguments from the run function
+    del meta_data['scope'], meta_data['wavegen'], meta_data['voltage_channel'], meta_data['current_channel'] 
     #NOTE I do not use current_chnnl_resolution at all in erics code
     capacitance = float(capacitor_area)*float(permittivity)*8.854e-12/float(thickness)
     current_chnnl_resolution = capacitance*50*float(amplification)

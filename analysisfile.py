@@ -3,22 +3,56 @@ This is a new system where I will add functionality to ekpy.analysis to allow yo
 them as well as spit out a verbose summary of all the functions done, and iterate through each step of applying functions in a seperate dictionary (or data file).
 This file should ONLY contain the functions that you want to apply in the order in which they should be applied as well as sufficient documnentation for each
 function in order to use the visualize analysis command. Also consider adding an __all__ check in the beginning
+
+Keyword for what it adds should be APPENDS: (str to be appended and should end with the 3 quotes to mark end of doc)
+
 '''
 
 import numpy as np
 import scipy.integrate as it
 from scipy.signal import find_peaks
+from inspect import getdoc, getmembers, isfunction
+
+
+__all__ = ('generate_q_wfm', 'generate_q_wfm_wrong',)
+
 
 def generate_q_wfm(data_dict) -> 'dict':
     """
     Adds 'wfm_q' to the given data_dict by integrating over the given waveform.
-    Requires the given data_dict to have 'wfm_c' and 'time_c' 
-    """
+
+    Requirements
+    ------------
+    wfm_c: dict key 
+        The data_dict key containing the current wf
+    time_c: dict key
+        The data_dict key containing the time wf
+    Returns
+    -------
+    data_dict: dict
+        The mutated dictionary with the q_wfm added.
+    
+    APPENDS: wfm_q"""
     wfm_q = it.cumulative_trapezoid(data_dict['wfm_c'], data_dict['time_c'], initial=0) 
     data_dict['wfm_q'] = wfm_q
     return data_dict
 
 def generate_q_wfm_wrong(data_dict) -> 'dict':
+    """
+    Adds 'wfm_q_wrong' to the given data_dict by integrating over the given waveform.
+
+    Requirements
+    ------------
+    wfm_c: dict key 
+        The data_dict key containing the current wf
+    time_c: dict key
+        The data_dict key containing the time wf
+    Returns
+    -------
+    data_dict: dict
+        The mutated dictionary with the q_wfm_wrong added.
+    
+    APPENDS: wfm_q_wrong"""
     wfm_q = it.cumulative_trapezoid(data_dict['wfm_v'], data_dict['time_v'], initial=0) 
     data_dict['wfm_q_wrong'] = wfm_q
     return data_dict
@@ -48,3 +82,6 @@ def start_and_end_pulse(data_dict)->'dict':
         counter +=2
     data_dict['start_and_end_pulse'] = green_points
     return data_dict
+
+bet = getdoc(generate_q_wfm)
+print(bet, 'hi')

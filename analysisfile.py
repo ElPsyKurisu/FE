@@ -6,6 +6,9 @@ function in order to use the visualize analysis command. Also consider adding an
 
 Keyword for what it adds should be APPENDS: (str to be appended and should end with the 3 quotes to mark end of doc)
 
+might also need to note in each doc what should be plotted if the visualize analysis is called. Can have a default that if its 
+not specified in the docstring of the funciton whatever is passed into visualize analysis works instead.
+
 '''
 
 import numpy as np
@@ -14,7 +17,7 @@ from scipy.signal import find_peaks
 from inspect import getdoc, getmembers, isfunction
 
 
-__all__ = ('generate_q_wfm', 'generate_q_wfm_wrong',)
+__all__ = ('generate_q_wfm', 'generate_q_wfm_wrong', 'find_peaks_troughs_index', 'start_and_end_pulse', )
 
 
 def generate_q_wfm(data_dict) -> 'dict':
@@ -82,6 +85,12 @@ def start_and_end_pulse(data_dict)->'dict':
         counter +=2
     data_dict['start_and_end_pulse'] = green_points
     return data_dict
+
+def do_nothing_test(data_dict):
+    """
+    Should not be able to be called since its not in __all__
+    """
+    return
 
 bet = getdoc(generate_q_wfm)
 print(bet, 'hi')

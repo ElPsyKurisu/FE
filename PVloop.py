@@ -145,6 +145,13 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, voltage,
     #Now we need to enable the wavegen, then acquire the data
     keysightdsox3024a.initiate(scope)
     keysight81150a.enable_output(wavegen)
+
+    '''
+    Modiciation to add enable output to chnnl 2 of the wavegen
+    '''
+    keysight81150a.enable_output(wavegen, '2')
+
+
     keysight81150a.send_software_trigger(wavegen)
     scope.query("*OPC?")
     keysightdsox3024a.setup_wf(scope, source='CHAN1')

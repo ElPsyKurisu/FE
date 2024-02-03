@@ -8,6 +8,7 @@ Keyword for what it adds should be MODIFIES: (str to be appended and should end 
 
 might also need to note in each doc what should be plotted if the visualize analysis is called. Can have a default that if its 
 not specified in the docstring of the funciton whatever is passed into visualize analysis works instead.
+PLOT_AGAINST is optional paramater that says what to plot against, otherwise we choose the first element in the data
 
 '''
 
@@ -16,9 +17,9 @@ import scipy.integrate as it
 from scipy.signal import find_peaks
 from inspect import getdoc, getmembers, isfunction
 
-__all__ = ('generate_q_wfm', 'generate_q_wfm_wrong',)
 
-#__all__ = ('generate_q_wfm', 'generate_q_wfm_wrong', 'find_peaks_troughs_index', 'start_and_end_pulse', )
+#__all__ = ('generate_q_wfm', 'generate_q_wfm_wrong',)
+__all__ = ('generate_q_wfm', 'generate_q_wfm_wrong', 'find_peaks_troughs_index', 'start_and_end_pulse', )
 
 
 def generate_q_wfm(data_dict) -> 'dict':
@@ -35,7 +36,7 @@ def generate_q_wfm(data_dict) -> 'dict':
     -------
     data_dict: dict
         The mutated dictionary with the q_wfm added.
-    
+    PLOT_AGAINST: time_c
     MODIFIES: wfm_q"""
     wfm_q = it.cumulative_trapezoid(data_dict['wfm_c'], data_dict['time_c'], initial=0) 
     data_dict['wfm_q'] = wfm_q
@@ -55,24 +56,50 @@ def generate_q_wfm_wrong(data_dict) -> 'dict':
     -------
     data_dict: dict
         The mutated dictionary with the q_wfm_wrong added.
-    
+    PLOT_AGAINST: time_c
     MODIFIES: wfm_q_wrong"""
     wfm_q = it.cumulative_trapezoid(data_dict['wfm_v'], data_dict['time_v'], initial=0) 
     data_dict['wfm_q_wrong'] = wfm_q
     return data_dict
 
 def find_peaks_troughs_index(data_dict)->'dict':
+    """
+    Adds 'peaks' to the given data_dict by using scipy to find the peaks and troughs.
+
+    Requirements
+    ------------
+    wfm_v: dict key 
+        The data_dict key containing the voltage wf
+    Returns
+    -------
+    data_dict: dict
+        The mutated dictionary with the peaks indexes added.
+        
+    MODIFIES: peaks"""
     arr = data_dict['wfm_v']
     arr_normalized = 2 * ((arr - np.min(arr)) / (np.max(arr) - np.min(arr))) - 1
     peaks, _ = find_peaks(arr_normalized, height=0.8)
     troughs, _ = find_peaks(-1*arr_normalized, height=0.8)
     all_peaks = np.concatenate((peaks, troughs), axis=0)
-    #results_full = peak_widths(arr_normalized, peaks, rel_height=1)
-    #data_dict['results_full'] = results_full
     data_dict['peaks'] = np.sort(all_peaks)
     return data_dict
 
 def start_and_end_pulse(data_dict)->'dict':
+    """
+    Adds 'start_and_end_pulse' to the given data_dict by using the given peaks and the fact that each
+    pulse is symmetric such that the difference between peaks is equal to have a pulse length.
+
+    Requirements
+    ------------
+    peaks: dict key 
+        The data_dict key containing the peak indices
+    Returns
+    -------
+    data_dict: dict
+        The mutated dictionary with the start_and_else_pulse added. Format is index 0 and 1 is the start
+        and end of the first pulse, index 2 and 3 is start and end of 2nd pulse, and so forth
+    
+    MODIFIES: start_and_end_pulse"""
     x = data_dict['peaks']
     counter = 0
     green_points = []

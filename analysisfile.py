@@ -4,7 +4,7 @@ them as well as spit out a verbose summary of all the functions done, and iterat
 This file should ONLY contain the functions that you want to apply in the order in which they should be applied as well as sufficient documnentation for each
 function in order to use the visualize analysis command. Also consider adding an __all__ check in the beginning
 
-Keyword for what it adds should be APPENDS: (str to be appended and should end with the 3 quotes to mark end of doc)
+Keyword for what it adds should be MODIFIES: (str to be appended and should end with the 3 quotes to mark end of doc)
 
 might also need to note in each doc what should be plotted if the visualize analysis is called. Can have a default that if its 
 not specified in the docstring of the funciton whatever is passed into visualize analysis works instead.
@@ -16,8 +16,9 @@ import scipy.integrate as it
 from scipy.signal import find_peaks
 from inspect import getdoc, getmembers, isfunction
 
+__all__ = ('generate_q_wfm', 'generate_q_wfm_wrong',)
 
-__all__ = ('generate_q_wfm', 'generate_q_wfm_wrong', 'find_peaks_troughs_index', 'start_and_end_pulse', )
+#__all__ = ('generate_q_wfm', 'generate_q_wfm_wrong', 'find_peaks_troughs_index', 'start_and_end_pulse', )
 
 
 def generate_q_wfm(data_dict) -> 'dict':
@@ -35,7 +36,7 @@ def generate_q_wfm(data_dict) -> 'dict':
     data_dict: dict
         The mutated dictionary with the q_wfm added.
     
-    APPENDS: wfm_q"""
+    MODIFIES: wfm_q"""
     wfm_q = it.cumulative_trapezoid(data_dict['wfm_c'], data_dict['time_c'], initial=0) 
     data_dict['wfm_q'] = wfm_q
     return data_dict
@@ -55,7 +56,7 @@ def generate_q_wfm_wrong(data_dict) -> 'dict':
     data_dict: dict
         The mutated dictionary with the q_wfm_wrong added.
     
-    APPENDS: wfm_q_wrong"""
+    MODIFIES: wfm_q_wrong"""
     wfm_q = it.cumulative_trapezoid(data_dict['wfm_v'], data_dict['time_v'], initial=0) 
     data_dict['wfm_q_wrong'] = wfm_q
     return data_dict
@@ -91,6 +92,3 @@ def do_nothing_test(data_dict):
     Should not be able to be called since its not in __all__
     """
     return
-
-bet = getdoc(generate_q_wfm)
-print(bet, 'hi')

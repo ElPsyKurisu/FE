@@ -15,11 +15,52 @@ PLOT_AGAINST is optional paramater that says what to plot against, otherwise we 
 import numpy as np
 import scipy.integrate as it
 from scipy.signal import find_peaks
+from inspect import getdoc, getmembers, isfunction
 
 
-__all__ = ('find_peaks_troughs_index', 'start_and_end_pulse', 'generate_q_wfm', 'drift_correct_q',)
+#__all__ = ('generate_q_wfm', 'generate_q_wfm_wrong',)
+__all__ = ('generate_q_wfm', 'generate_q_wfm_wrong', 'find_peaks_troughs_index', 'start_and_end_pulse', )
 
 
+def generate_q_wfm(data_dict) -> 'dict':
+    """
+    Adds 'wfm_q' to the given data_dict by integrating over the given waveform.
+
+    Requirements
+    ------------
+    wfm_c: dict key 
+        The data_dict key containing the current wf
+    time_c: dict key
+        The data_dict key containing the time wf
+    Returns
+    -------
+    data_dict: dict
+        The mutated dictionary with the q_wfm added.
+    PLOT_AGAINST: time_c
+    MODIFIES: wfm_q"""
+    wfm_q = it.cumulative_trapezoid(data_dict['wfm_c'], data_dict['time_c'], initial=0) 
+    data_dict['wfm_q'] = wfm_q
+    return data_dict
+
+def generate_q_wfm_wrong(data_dict) -> 'dict':
+    """
+    Adds 'wfm_q_wrong' to the given data_dict by integrating over the given waveform.
+
+    Requirements
+    ------------
+    wfm_c: dict key 
+        The data_dict key containing the current wf
+    time_c: dict key
+        The data_dict key containing the time wf
+    Returns
+    -------
+    data_dict: dict
+        The mutated dictionary with the q_wfm_wrong added.
+    PLOT_AGAINST: time_c
+    MODIFIES: wfm_q_wrong"""
+    wfm_q = it.cumulative_trapezoid(data_dict['wfm_v'], data_dict['time_v'], initial=0) 
+    data_dict['wfm_q_wrong'] = wfm_q
+    return data_dict
 
 def find_peaks_troughs_index(data_dict)->'dict':
     """
@@ -70,54 +111,11 @@ def start_and_end_pulse(data_dict)->'dict':
         green_points.append(int(start_of_pulse))
         green_points.append(int(end_of_pulse))
         counter +=2
-    data_dict['start_and_end_pulse'] = np.array(green_points)
+    data_dict['start_and_end_pulse'] = green_points
     return data_dict
 
-def generate_q_wfm(data_dict) -> 'dict':
+def do_nothing_test(data_dict):
     """
-    Adds 'wfm_q' to the given data_dict by integrating over the given waveform.
-
-    Requirements
-    ------------
-    wfm_c: dict key 
-        The data_dict key containing the current wf
-    time_c: dict key
-        The data_dict key containing the time wf
-    Returns
-    -------
-    data_dict: dict
-        The mutated dictionary with the q_wfm added.
-    PLOT_AGAINST: time_c
-    MODIFIES: wfm_q"""
-    wfm_q = it.cumulative_trapezoid(data_dict['wfm_c'], data_dict['time_c'], initial=0) 
-    data_dict['wfm_q'] = wfm_q
-    return data_dict
-
-def drift_correct_q(data_dict)-> 'dict':
+    Should not be able to be called since its not in __all__
     """
-    Changes 'wfm_q' to the given data_dict by integrating over the given waveform. Also will be used
-    to show how when u modify an existing key the non drift corrected version can still be obtained
-    by use of the data_saver method (since a seperate data object is created for each function)
-
-    modifying to not take the last element rn, since there is a time delay between voltage and current wf so we are shifted
-    and that is messing up the drift corrects A better drift correct could be using the pulse lengths, by averaging across
-    all 4 pulses
-
-    Requirements
-    ------------
-    wfm_q: dict key 
-        The data_dict key containing the charge wf
-    time_c: dict key
-        The data_dict key containing the time wf
-    Returns
-    -------
-    data_dict: dict
-        The mutated dictionary with the q_wfm added.
-    PLOT_AGAINST: time_c
-    MODIFIES: wfm_q"""
-    slope = (data_dict['wfm_q'][-1] - data_dict['wfm_q'][0])/(data_dict['time_c'][-1] - data_dict['time_c'][0])
-    wfm_q_drift_corrected = []
-    for i in range(len(data_dict['wfm_q'])):
-        wfm_q_drift_corrected.append(data_dict['wfm_q'][i]-(slope*data_dict['time_c'][i]))
-    data_dict['wfm_q'] = wfm_q_drift_corrected
-    return data_dict
+    return

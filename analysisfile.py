@@ -74,7 +74,7 @@ def find_peaks_troughs_index(data_dict)->'dict':
     -------
     data_dict: dict
         The mutated dictionary with the peaks indexes added.
-        
+
     MODIFIES: peaks"""
     arr = data_dict['wfm_v']
     arr_normalized = 2 * ((arr - np.min(arr)) / (np.max(arr) - np.min(arr))) - 1

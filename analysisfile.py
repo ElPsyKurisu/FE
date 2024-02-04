@@ -10,15 +10,18 @@ might also need to note in each doc what should be plotted if the visualize anal
 not specified in the docstring of the funciton whatever is passed into visualize analysis works instead.
 PLOT_AGAINST is optional paramater that says what to plot against, otherwise we choose the first element in the data
 
+WOULD LIKE TO ADD A METHOD WHERE BY CONVENTION THE LAST FUNCTION IS WHERE YOU DEFINE YOUR PLOTTING FUNCTION FOR THE FINAL RESULT BUT IT
+DOESNT MESS UP WHAT IVE ADDED ALREADY turns out you can add it whenever in the flow and it will not error (note needed to update ekpy for this)
+
 '''
 
 import numpy as np
 import scipy.integrate as it
 from scipy.signal import find_peaks
+import matplotlib.pyplot as plt
 
 
-__all__ = ('find_peaks_troughs_index', 'start_and_end_pulse', 'generate_q_wfm', 'drift_correct_q',)
-
+__all__ = ('find_peaks_troughs_index', 'start_and_end_pulse', 'generate_q_wfm', 'drift_correct_q', 'plot',)
 
 
 def find_peaks_troughs_index(data_dict)->'dict':
@@ -121,3 +124,39 @@ def drift_correct_q(data_dict)-> 'dict':
         wfm_q_drift_corrected.append(data_dict['wfm_q'][i]-(slope*data_dict['time_c'][i]))
     data_dict['wfm_q'] = wfm_q_drift_corrected
     return data_dict
+
+def plot(data_dict) -> None:
+    """
+    Plots 'wfm_q' vs 'wfm_v' to make a PV plot.
+
+    Requirements
+    ------------
+    wfm_q: dict key 
+        The data_dict key containing the charge wf
+    wfm_v: dict key
+        The data_dict key containing the voltage wf
+    Returns
+    -------
+    None
+    PLOT_AGAINST: None
+    MODIFIES: None"""
+    start_and_end_pulse = data_dict['start_and_end_pulse']
+    i = 0
+    start = start_and_end_pulse[0]
+    end = start_and_end_pulse[1]
+    y_arr = data_dict['wfm_q']
+    x_arr = data_dict['wfm_v']
+    max = np.max(y_arr[start:end])
+    while i < len(start_and_end_pulse):
+        start = start_and_end_pulse[i]
+        end = start_and_end_pulse[i+1]
+        other_max = np.max(y_arr[start:end])
+        y_offset = max - other_max
+        y_arr[start:end] += y_offset
+        plt.plot(x_arr[start:end], y_arr[start:end])
+        i += 2
+    plt.title('PV Loops')
+    plt.xlabel('Voltage (V)')
+    plt.ylabel('Charge Q')
+
+

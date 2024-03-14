@@ -167,6 +167,24 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, voltage,
     base_name = 'fe_pv_'
     return base_name, meta_data, df
 
+
+def wakeup_sherry(wavegen, channel='1', num_cycles='1e7', voltage='2', pulse_width='1e-6'):
+    """
+    This program will make a bipolar pulse and then configure it accordingly
+    wavegen (pyvisa.resources.gpib.GPIBInstrument): Keysight 81150a
+    channel (str): channel to output too ['1', '2']
+
+    """
+    basic_bipolar_pulse = [1,1,-1,-1] #basic pulse train
+    keysight81150a.create_arb_wf(wavegen, basic_bipolar_pulse)
+    frequency = 1/(4*float(pulse_width))
+    keysight81150a.configure_arb_wf(wavegen, channel, freq=frequency, gain=voltage)
+    keysight81150a.enable_output(wavegen, channel)
+    total_wait_time = int(float(num_cycles)*(2* float(pulse_width)))
+    time.sleep(total_wait_time)
+    keysight81150a.enable_output(wavegen, channel, False)
+    
+
 class FEHysteresis(core.experiment):
     """Experiment class for running creating hysteresis loops of PV. 
 

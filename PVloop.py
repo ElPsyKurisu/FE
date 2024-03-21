@@ -18,17 +18,18 @@ BNC and connect channel 2 of the scope to port B also via BNC (no bannannas need
 
 
 
-def pv_hysteresis_wf(initial_delay, freq, pulse_delay, voltage, qtimepoints=12):
+def pv_hysteresis_wf(initial_delay, freq, pulse_delay, qtimepoints=12):
     '''
     Creates the waveform used to calculate the hysteresis of the sample, should create 2 sawtooth waveforms followed
     by 2 inverted ones. This code was taken from labview and alot of it is not needed but since it works we shall leave
     it as is for now. Despite the fact we never use q_time 
+
+    Currently doesnt work if voltage is not 1, but it should always be 1
     '''
     #first build Qtime
     initial_delay = float(initial_delay)
     freq = float(freq)
     pulse_delay = float(pulse_delay)
-    voltage = float(voltage)
     q_time = []
     t_increment = 0.0005/freq
     sumsofar = initial_delay
@@ -71,10 +72,11 @@ def pv_hysteresis_wf(initial_delay, freq, pulse_delay, voltage, qtimepoints=12):
     #note this was the same shit as doing like np.linearinterpolate or linspace with max being the last element
 
     #Now we make a voltage array
-    voltage_array = voltage*np.array([0,0,1,-1,0,0,1,-1,0,0,-1,1,0,0,-1,1,0,0])
+    voltage_array = np.array([0,0,1,-1,0,0,1,-1,0,0,-1,1,0,0,-1,1,0,0])
     temp = interpolate.interp1d(time_array, voltage_array)
     interp_voltage_array = temp(interp_time)
     #only thing we use from this is interp_voltage_array wtf
+    plt.plot(interp_time, interp_voltage_array)
     return q_time, time_array, waveform_freq, interp_time, interp_voltage_array
 
 def setup_scope(scope, time_scale, voltage_channel, current_channel,
@@ -140,7 +142,7 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, voltage,
     #Loop over the loop count
     voltage = float(voltage)
     #first we need to setup the wavegen
-    q_time_arr, time_array, waveform_freq, interp_time_arr, interp_voltage_array = pv_hysteresis_wf(initial_delay, freq, pulse_delay, voltage)
+    q_time_arr, time_array, waveform_freq, interp_time_arr, interp_voltage_array = pv_hysteresis_wf(initial_delay, freq, pulse_delay)
     setup_wavegen(wavegen, voltage_channel, interp_voltage_array, waveform_freq, voltage)
     #NOW we actually take the data, send out the pulse and get the data, f labview for this part
     #Now we need to enable the wavegen, then acquire the data

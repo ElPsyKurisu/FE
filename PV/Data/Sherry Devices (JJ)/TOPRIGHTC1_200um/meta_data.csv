@@ -1,0 +1,3 @@
+initial_delay,pulse_delay,freq,voltage,capacitor_area,thickness,permittivity,amplification,format,type,points,count,x_increment,x_origin,x_reference,y_increment,y_origin,y_reference,trial,filename
+5e-05,5e-06,10,2,4e-08,1e-08,30,8,0,0,995,1,4.72e-07,2.71050543e-20,0,0.0201005,0.0,0,0,fe_pv__0.csv
+5e-5,5e-6,10,2,4e-8,10e-9,30,8,0,0,995,1,4.72e-07,2.71050543e-20,0,0.02010050043463707,0.0,0,0,fe_pv__1.csv

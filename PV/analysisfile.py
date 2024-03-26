@@ -63,7 +63,6 @@ def start_and_end_pulse(data_dict)->'dict':
     
     MODIFIES: start_and_end_pulse"""
     x = data_dict['peaks']
-    print(x)
     if len(x)%2 == 1:
         x = x[:-1] #if odd remove last element fixes errors
     counter = 0

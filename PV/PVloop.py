@@ -8,6 +8,7 @@ import scipy.integrate as it
 import pandas as pd
 from ekpy.control import plotting
 import matplotlib.pyplot as plt
+from datetime import timedelta
 
 """
 This program is used to generate a dataset on a FE sample to then calculate Hysteresis. It works by sending in a series of triangle pulses
@@ -91,22 +92,22 @@ def setup_scope(scope, time_scale, voltage_channel, current_channel,
 
     
 
-def setup_wavegen(wavegen, voltage_channel, interp_voltage_array, waveform_freq, voltage):
+def setup_wavegen(wavegen, voltage_channel, current_channel, interp_voltage_array, waveform_freq, voltage):
     keysight81150a.initialize(wavegen)
     keysight81150a.configure_impedance(wavegen, voltage_channel, source_impedance='50.0', load_impedance='50')
-    keysight81150a.configure_impedance(wavegen, '2', source_impedance='50.0', load_impedance='50') #changed load from 1000000
+    keysight81150a.configure_impedance(wavegen, current_channel, source_impedance='50.0', load_impedance='50') #changed load from 1000000
     keysight81150a.configure_trigger(wavegen, voltage_channel, source='MAN')
     keysight81150a.configure_output_amplifier(wavegen, voltage_channel)
-    keysight81150a.configure_output_amplifier(wavegen, '2')
+    keysight81150a.configure_output_amplifier(wavegen, current_channel)
     keysight81150a.create_arb_wf(wavegen, interp_voltage_array, 'PV')
     keysight81150a.configure_arb_wf(wavegen, voltage_channel, 'PV', gain=f'{voltage*2}', freq=f'{waveform_freq}') 
-    keysight81150a.configure_arb_wf(wavegen, '2', 'PV', gain=f'{voltage*2}', freq=f'{waveform_freq}')
+    keysight81150a.configure_arb_wf(wavegen, current_channel, 'PV', gain=f'{voltage*2}', freq=f'{waveform_freq}')
 
 
 def run_function(scope, wavegen, initial_delay, pulse_delay, freq, voltage, 
                  capacitor_area, thickness, permittivity, amplification, 
                  voltage_channel:str='1', current_channel:str='2'):
-    """Run function for FEHysteresis expirement. 
+    """Run function for PVHysteresis expirement. 
     
     NOTE MIGHT WANT TO ADD TO BE ABLE TO ACCEPT FOR FREQ: '10KHZ' SYNTAX LIKE BEFORE.
 
@@ -143,7 +144,7 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, voltage,
     voltage = float(voltage)
     #first we need to setup the wavegen
     q_time_arr, time_array, waveform_freq, interp_time_arr, interp_voltage_array = pv_hysteresis_wf(initial_delay, freq, pulse_delay)
-    setup_wavegen(wavegen, voltage_channel, interp_voltage_array, waveform_freq, voltage)
+    setup_wavegen(wavegen, voltage_channel, current_channel, interp_voltage_array, waveform_freq, voltage)
     #NOW we actually take the data, send out the pulse and get the data, f labview for this part
     #Now we need to enable the wavegen, then acquire the data
     keysightdsox3024a.initiate(scope)
@@ -158,7 +159,7 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, voltage,
     keysight81150a.send_software_trigger(wavegen)
     scope.query("*OPC?")
     keysightdsox3024a.setup_wf(scope, source='CHAN1')
-    metadata_v, time_v, wfm_v = keysightdsox3024a.query_wf(scope) #currently times out here
+    metadata_v, time_v, wfm_v = keysightdsox3024a.query_wf(scope) 
     meta_data.update(metadata_v)
     time.sleep(.2)
     keysightdsox3024a.setup_wf(scope, source='CHAN2')
@@ -171,24 +172,32 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, voltage,
     return base_name, meta_data, df
 
 
-def wakeup_sherry(wavegen, channel='1', num_cycles='1e8', voltage='2', pulse_width='2e-6'):
+def wakeup_sherry(wavegen, channel='2', num_cycles='1e8', voltage='2', pulse_width='2e-6'):
     """
     This program will make a bipolar pulse and then configure it accordingly
     wavegen (pyvisa.resources.gpib.GPIBInstrument): Keysight 81150a
     channel (str): channel to output too ['1', '2']
-
+    
+    notes: do not need an offset by default half is positive half is negative. Also Voltage is measured from 0 to a peak
+    not peak-to-peak even though the instrument panel says it is... Make sure to change cabling
     """
-    basic_bipolar_pulse = [1,1,-1,-1] #basic pulse train
-    keysight81150a.create_arb_wf(wavegen, basic_bipolar_pulse)
     frequency = 1/(2*float(pulse_width))
-    keysight81150a.configure_arb_wf(wavegen, channel, freq=frequency, gain=voltage)
-    keysight81150a.enable_output(wavegen, channel)
+    keysight81150a.initialize(wavegen)
+    keysight81150a.set_output_wf(wavegen, channel, 'squ', frequency, voltage)
     total_wait_time = int(float(num_cycles)*(2* float(pulse_width)))
-    time.sleep(total_wait_time)
-    keysight81150a.enable_output(wavegen, channel, False)
+    td_str = str(timedelta(seconds=total_wait_time))
+    print("Estimated total wait time is: {}".format(td_str))
+    print("Check cabling is good to go for wakeup")
+    #check for user input if itme is ok
+    affirmative = input("Print y if the allotted time is correct")
+    if affirmative == 'y':
+        keysight81150a.enable_output(wavegen, channel)
+        time.sleep(total_wait_time)
+        keysight81150a.enable_output(wavegen, channel, False)
+        print("Make sure to check cabling is correct now")
     
 
-class FEHysteresis(core.experiment):
+class PVHysteresis(core.experiment):
     """Experiment class for running creating hysteresis loops of PV. 
 
     args:

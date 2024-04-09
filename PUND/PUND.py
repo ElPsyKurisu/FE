@@ -22,24 +22,23 @@ Will work the same way where there will be a timing issue between the two wavefo
 probably causes the slope issue I have with PV loops
 """
 
-def setup_scope(scope, time_scale, voltage_channel, current_channel,
+def setup_scope(scope, time_range, voltage_channel, current_channel,
                 voltage_scale):
     keysightdsox3024a.initialize(scope)
-    keysightdsox3024a.configure_timebase(scope, time_base_type='MAIN', reference='CENTer', scale=f'{time_scale}', position=f'{5*time_scale}')
+    keysightdsox3024a.configure_timebase(scope, time_base_type='MAIN', reference='CENTer', range=f'{time_range}', position=f'{0}')
     keysightdsox3024a.configure_channel(scope, channel=voltage_channel, vertical_scale=voltage_scale, impedance='FIFT')#set both to 50ohm
     keysightdsox3024a.configure_channel(scope, channel=current_channel, vertical_scale=voltage_scale, impedance='FIFT')
     #NOTE changing the position now to 5* the timebase to hopefully get the full signal NOTE this might not work for this program
     keysightdsox3024a.configure_trigger_characteristics(scope, trigger_source='EXT', low_voltage_level='0.75', high_voltage_level='0.95', sweep='NORM')
     keysightdsox3024a.configure_trigger_edge(scope, trigger_source='EXT', input_coupling='DC')
 
-def setup_wavegen(wavegen, voltage_channel, current_channel, pulse_width, pulse_delay, voltage):
+def setup_wavegen(wavegen, voltage_channel, current_channel, wf, waveform_freq, voltage):
     keysight81150a.initialize(wavegen)
     keysight81150a.configure_impedance(wavegen, voltage_channel, source_impedance='50.0', load_impedance='50')
     keysight81150a.configure_impedance(wavegen, current_channel, source_impedance='50.0', load_impedance='50') 
     keysight81150a.configure_trigger(wavegen, voltage_channel, source='MAN')
     keysight81150a.configure_output_amplifier(wavegen, voltage_channel)
     keysight81150a.configure_output_amplifier(wavegen, current_channel)
-    wf, waveform_freq = create_PUND_wf(pulse_width, pulse_delay)
     keysight81150a.create_arb_wf(wavegen, wf)
     keysight81150a.configure_arb_wf(wavegen, voltage_channel, 'VOLATILE', gain=f'{voltage}', freq=f'{waveform_freq}')
     keysight81150a.configure_arb_wf(wavegen, current_channel, 'VOLATILE', gain=f'{voltage}', freq=f'{waveform_freq}')
@@ -62,9 +61,19 @@ def create_PUND_wf(pulse_width, pulse_delay):
     pulse_4 = [-1, 0] + delay_list
     pulse_5 = [-1, 0] + delay_list
     PUND_wf = pulse_1 + pulse_2 + pulse_3 + pulse_4 + pulse_5
+    scale_factor = 5
+    index = 0
+    scaled_PUND_wf = PUND_wf[:]
+    for i in range(len(PUND_wf)):
+        value = PUND_wf[i]
+        to_be_inserted = [value]*scale_factor 
+        scaled_PUND_wf[index:index] = to_be_inserted
+        index += 5
+
+
     total_wf_len = 10*(pulse_width) + 5*(pulse_delay) #see img for reasoning
     freq = 1/total_wf_len
-    return PUND_wf, freq
+    return scaled_PUND_wf, freq, total_wf_len
 
 
 
@@ -96,11 +105,12 @@ def run_function(scope, wavegen, pulse_width, pulse_delay, voltage_max, num_poin
     meta_data = locals() #this just passes in all the arguments from the run function
     del meta_data['scope'], meta_data['wavegen'], meta_data['voltage_channel'], meta_data['current_channel']
     capacitance = float(capacitor_area)*float(permittivity)*8.854e-12/float(thickness)
-    time_scale = 1/float(freq)
-    voltage_channel_scale = float(voltage)/4
-    setup_scope(scope, time_scale, voltage_channel, current_channel, f'{voltage_channel_scale}')
+    PUND_wf, freq, total_wf_len = create_PUND_wf(pulse_width, pulse_delay)
+    voltage_channel_scale = 1 #note will change later once i implement actual loop lol
+    voltage = 1
+    setup_scope(scope, total_wf_len, voltage_channel, current_channel, f'{voltage_channel_scale}')
 
-    setup_wavegen(wavegen, voltage_channel, current_channel, freq, voltage)
+    setup_wavegen(wavegen, voltage_channel, current_channel, PUND_wf, freq, voltage)
 
     keysightdsox3024a.initiate(scope)
     keysight81150a.enable_output(wavegen)
@@ -117,7 +127,7 @@ def run_function(scope, wavegen, pulse_width, pulse_delay, voltage_max, num_poin
     meta_data.update(metadata_c)
     #How to structure the data that comes out, its going to be in a pandas df, but how. Kind of want to make it nested with raw and pv but idk
     df = pd.DataFrame({'time_v':time_v, 'wfm_v':wfm_v, 'time_c':time_c, 'wfm_c':wfm_c})
-    base_name = 'fe_iv_'
+    base_name = 'fe_PUND_PV_'
     return base_name, meta_data, df
 
 

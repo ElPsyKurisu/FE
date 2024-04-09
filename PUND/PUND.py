@@ -32,16 +32,41 @@ def setup_scope(scope, time_scale, voltage_channel, current_channel,
     keysightdsox3024a.configure_trigger_characteristics(scope, trigger_source='EXT', low_voltage_level='0.75', high_voltage_level='0.95', sweep='NORM')
     keysightdsox3024a.configure_trigger_edge(scope, trigger_source='EXT', input_coupling='DC')
 
-def setup_wavegen(wavegen, voltage_channel, current_channel, waveform_freq, voltage):
+def setup_wavegen(wavegen, voltage_channel, current_channel, pulse_width, pulse_delay, voltage):
     keysight81150a.initialize(wavegen)
     keysight81150a.configure_impedance(wavegen, voltage_channel, source_impedance='50.0', load_impedance='50')
-    keysight81150a.configure_impedance(wavegen, current_channel, source_impedance='50.0', load_impedance='50') #changed load from 1000000
+    keysight81150a.configure_impedance(wavegen, current_channel, source_impedance='50.0', load_impedance='50') 
     keysight81150a.configure_trigger(wavegen, voltage_channel, source='MAN')
     keysight81150a.configure_output_amplifier(wavegen, voltage_channel)
     keysight81150a.configure_output_amplifier(wavegen, current_channel)
+    wf, waveform_freq = create_PUND_wf(pulse_width, pulse_delay)
+    keysight81150a.create_arb_wf(wavegen, wf)
+    keysight81150a.configure_arb_wf(wavegen, voltage_channel, 'VOLATILE', gain=f'{voltage}', freq=f'{waveform_freq}')
+    keysight81150a.configure_arb_wf(wavegen, current_channel, 'VOLATILE', gain=f'{voltage}', freq=f'{waveform_freq}')
 
-    keysight81150a.set_output_wf(wavegen, voltage_channel, 'RAMP', waveform_freq, voltage)
-    keysight81150a.set_output_wf(wavegen, current_channel, 'RAMP', waveform_freq, voltage)
+
+def create_PUND_wf(pulse_width, pulse_delay):
+    """
+    Helper function that creates the PUND wf, can be later replaced by a read file if it is desired
+    to have an external file hold the PUND wf and gives us the frequnecy
+    """
+    pulse_width = float(pulse_width)
+    pulse_delay = float(pulse_delay)
+    if pulse_delay < pulse_width:
+        raise ValueError("Pulse delay cannot be lower than pulse width, check your values and try again")
+    ratio = int(pulse_delay/pulse_width) #this tells us how much longer the pulse width is careful cuz its rounding to nearest int btw
+    delay_list = [0] * ratio
+    pulse_1 = [-1, 0] + delay_list
+    pulse_2 = [1, 0] + delay_list
+    pulse_3 = [1, 0] + delay_list
+    pulse_4 = [-1, 0] + delay_list
+    pulse_5 = [-1, 0] + delay_list
+    PUND_wf = pulse_1 + pulse_2 + pulse_3 + pulse_4 + pulse_5
+    total_wf_len = 10*(pulse_width) + 5*(pulse_delay) #see img for reasoning
+    freq = 1/total_wf_len
+    return PUND_wf, freq
+
+
 
 
 def run_function(scope, wavegen, pulse_width, pulse_delay, voltage_max, num_points=20, step_size=None, capacitor_area=None, thickness=None, permittivity=None,

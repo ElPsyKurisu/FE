@@ -25,7 +25,7 @@ probably causes the slope issue I have with PV loops
 def setup_scope(scope, time_range, voltage_channel, current_channel,
                 voltage_scale):
     keysightdsox3024a.initialize(scope)
-    keysightdsox3024a.configure_timebase(scope, time_base_type='MAIN', reference='CENTer', range=f'{time_range}', position=f'{0}')
+    keysightdsox3024a.configure_timebase(scope, time_base_type='MAIN', reference='CENTer', range=f'{time_range}', position=f'{time_range/2.1}') #divid by 2 gives us right when it starts so 2.1 gives us a bit of leeway to start with
     keysightdsox3024a.configure_channel(scope, channel=voltage_channel, vertical_scale=voltage_scale, impedance='FIFT')#set both to 50ohm
     keysightdsox3024a.configure_channel(scope, channel=current_channel, vertical_scale=voltage_scale, impedance='FIFT')
     #NOTE changing the position now to 5* the timebase to hopefully get the full signal NOTE this might not work for this program
@@ -34,14 +34,12 @@ def setup_scope(scope, time_range, voltage_channel, current_channel,
 
 def setup_wavegen(wavegen, voltage_channel, current_channel, wf, waveform_freq, voltage):
     keysight81150a.initialize(wavegen)
+    keysight81150a.couple_channels(wavegen)
     keysight81150a.configure_impedance(wavegen, voltage_channel, source_impedance='50.0', load_impedance='50')
-    keysight81150a.configure_impedance(wavegen, current_channel, source_impedance='50.0', load_impedance='50') 
     keysight81150a.configure_trigger(wavegen, voltage_channel, source='MAN')
-    keysight81150a.configure_output_amplifier(wavegen, voltage_channel)
-    keysight81150a.configure_output_amplifier(wavegen, current_channel)
-    keysight81150a.create_arb_wf(wavegen, wf)
-    keysight81150a.configure_arb_wf(wavegen, voltage_channel, 'VOLATILE', gain=f'{voltage}', freq=f'{waveform_freq}')
-    keysight81150a.configure_arb_wf(wavegen, current_channel, 'VOLATILE', gain=f'{voltage}', freq=f'{waveform_freq}')
+    keysight81150a.create_arb_wf(wavegen, wf, 'PUND') #does not work with volatile
+    keysight81150a.configure_arb_wf(wavegen, voltage_channel, 'PUND', gain=f'{voltage*4}', freq=f'{waveform_freq}')
+    keysight81150a.configure_arb_wf(wavegen, current_channel, 'PUND', gain=f'{voltage*4}', freq=f'{waveform_freq}')
 
 
 def create_PUND_wf(pulse_width, pulse_delay):
@@ -69,7 +67,7 @@ def create_PUND_wf(pulse_width, pulse_delay):
         to_be_inserted = [value]*scale_factor 
         scaled_PUND_wf[index:index] = to_be_inserted
         index += 5
-
+    scaled_PUND_wf = scaled_PUND_wf[:-len(PUND_wf)] #this removes original from the list
 
     total_wf_len = 10*(pulse_width) + 5*(pulse_delay) #see img for reasoning
     freq = 1/total_wf_len

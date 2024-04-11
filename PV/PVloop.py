@@ -91,7 +91,7 @@ def setup_scope(scope, time_scale, voltage_channel, current_channel,
     keysightdsox3024a.configure_trigger_edge(scope, trigger_source='EXT', input_coupling='DC')
 
     
-
+"""
 def setup_wavegen(wavegen, voltage_channel, current_channel, interp_voltage_array, waveform_freq, voltage):
     keysight81150a.initialize(wavegen)
     keysight81150a.configure_impedance(wavegen, voltage_channel, source_impedance='50.0', load_impedance='50')
@@ -99,6 +99,21 @@ def setup_wavegen(wavegen, voltage_channel, current_channel, interp_voltage_arra
     keysight81150a.configure_trigger(wavegen, voltage_channel, source='MAN')
     keysight81150a.configure_output_amplifier(wavegen, voltage_channel)
     keysight81150a.configure_output_amplifier(wavegen, current_channel)
+    keysight81150a.create_arb_wf(wavegen, interp_voltage_array, 'PV')
+    keysight81150a.configure_arb_wf(wavegen, voltage_channel, 'PV', gain=f'{voltage*2}', freq=f'{waveform_freq}') 
+    keysight81150a.configure_arb_wf(wavegen, current_channel, 'PV', gain=f'{voltage*2}', freq=f'{waveform_freq}')
+"""
+def setup_wavegen(wavegen, voltage_channel, current_channel, interp_voltage_array, waveform_freq, voltage):
+    """
+    New version to take into account that you can couple channels 1 and 2 making things simpler,
+    note still need to configure arb wf for channel 2 otherwise it goes to exp rise,
+    had to remove configure output amplifier cuz you cant sync them
+    """
+    keysight81150a.initialize(wavegen)
+    keysight81150a.couple_channels(wavegen)
+    keysight81150a.configure_impedance(wavegen, voltage_channel, source_impedance='50.0', load_impedance='50')
+    keysight81150a.configure_trigger(wavegen, voltage_channel, source='MAN')
+    #keysight81150a.configure_output_amplifier(wavegen, voltage_channel) causes program to error as differentail amplifier and channel coupling bad
     keysight81150a.create_arb_wf(wavegen, interp_voltage_array, 'PV')
     keysight81150a.configure_arb_wf(wavegen, voltage_channel, 'PV', gain=f'{voltage*2}', freq=f'{waveform_freq}') 
     keysight81150a.configure_arb_wf(wavegen, current_channel, 'PV', gain=f'{voltage*2}', freq=f'{waveform_freq}')
@@ -148,7 +163,7 @@ def run_function(scope, wavegen, initial_delay, pulse_delay, freq, voltage,
     #NOW we actually take the data, send out the pulse and get the data, f labview for this part
     #Now we need to enable the wavegen, then acquire the data
     keysightdsox3024a.initiate(scope)
-    keysight81150a.enable_output(wavegen)
+    keysight81150a.enable_output(wavegen, '1')
 
     '''
     Modiciation to add enable output to chnnl 2 of the wavegen

@@ -55,89 +55,47 @@ def setup_wavegen(wavegen, voltage_channel, current_channel, wf, waveform_freq, 
     keysight81150a.couple_channels(wavegen)
     keysight81150a.configure_impedance(wavegen, voltage_channel, source_impedance='50.0', load_impedance='50')
     keysight81150a.configure_trigger(wavegen, voltage_channel, source='MAN')
-    keysight81150a.create_arb_wf(wavegen, wf, 'PUND') #does not work with volatile
-    keysight81150a.configure_arb_wf(wavegen, voltage_channel, 'PUND', gain=f'{voltage*4}', freq=f'{waveform_freq}')
-    keysight81150a.configure_arb_wf(wavegen, current_channel, 'PUND', gain=f'{voltage*4}', freq=f'{waveform_freq}')
+    keysight81150a.create_arb_wf(wavegen, wf, 'DWM') #does not work with volatile
+    keysight81150a.configure_arb_wf(wavegen, voltage_channel, 'DWM', gain=f'{2*float(voltage)}', freq=f'{waveform_freq}')
+    keysight81150a.configure_arb_wf(wavegen, current_channel, 'DWM', gain=f'{2*float(voltage)}', freq=f'{waveform_freq}')
 
 
-def create_DWM_wf(pulse_width, pulse_delay, cutoff=2, resolution=10):
+def create_DWM_wf(pulse_width, pulse_delay):
     """
-    Helper function that creates the PUND wf, can be later replaced by a read file if it is desired
-    to have an external file hold the PUND wf and gives us the frequnecy
-    Note if ratio of pulse_delay is not an integer it rounds to nearest CUTOFF decimal places in order to keep 
-    file size low for transfering wf to 
+    Helper function that creates the DWM wf, can be later replaced by a read file if it is desired
+    to have an external file hold the DWM wf and gives us the frequnecy
+    Returns the full_wf file as well as the required frequency to setup the wavegen with, note hardcoded
+    100 so if pulse_delay and pulse_width are too far apart we can have problems
     """
-
-    pulse_width = float(pulse_width)
-    pulse_delay = float(pulse_delay)
-
-    #I dont even need the pulse width or delay lol, cuz oyu just configure it later lmao
-
     ratio = pulse_width/pulse_delay
-    #check if ratio is within allowed cutoff
-    ratio_str = str(ratio)
-    zero_index = ratio_str.find('.')
-    if zero_index!= -1:
-        num_of_decimal_points = len(ratio_str) - zero_index - 1
+
+    if ratio > 1:
+        sampling_rate = int(100 * ratio/2)
+        delay_length = 100
     else:
-        num_of_decimal_points = 0
+        sampling_rate = 100
+        delay_length = int(100/ratio)
+    a = np.linspace(0,1,sampling_rate, endpoint=False) #end at 0.9
+    b= np.linspace(1,-1,2*sampling_rate, endpoint=False) #ends at -0.9
+    c=np.linspace(-1, 0, sampling_rate, endpoint=False) #ends at 0 so we need to remove last element
+    triangle_wf = np.concatenate((a,b,c)) #can round at the end after I make the entire array lol
 
-    if num_of_decimal_points > cutoff:
-        num_of_decimal_points = cutoff   
-        print(" WARNING: Rounded to {} decimals for ratio of pulse_delay/pulse_width, frequnecy may be innacurate".format(cutoff))
-    #lets make this program round to n decimals
+    a = np.linspace(0,1,sampling_rate, endpoint=False) #end at 0.9
+    b=np.linspace(1, 0, sampling_rate, endpoint=False) #doesnt end at 0
+    pos_pulse = np.concatenate((a,b))
+    neg_pulse = -1* pos_pulse
+    delay_pulse = np.zeros(delay_length)
 
-    num_points_single_pulse = int(10*ratio*10**(num_of_decimal_points)) #need to be an int lol
-    #calculata ratio correctly and sepeartely
-    if pulse_delay < pulse_width:
-        ratio = pulse_width/pulse_delay #5us and 1us delay we get ratio of 5, what if I do something like 5.5 what I could do is just round to nearest wahtever
-        num_points_single_pulse = int(10*ratio*10**(num_of_decimal_points))
-        num_points_delay = 10*10**(num_of_decimal_points) #base value
-    else:
-        ratio = pulse_delay/pulse_width 
-        num_points_delay = int(2*ratio*10**(num_of_decimal_points)) #add two since we need integers for resolution
-        num_points_single_pulse = 2*10**(num_of_decimal_points) #base value
+    full_wf = np.round(np.concatenate((triangle_wf, delay_pulse, pos_pulse, delay_pulse, pos_pulse, delay_pulse, neg_pulse, delay_pulse, neg_pulse, delay_pulse)), decimals=3)
 
-    resolution = num_points_single_pulse/2
-    #first make original triangle part, lets say we want a range of 100 points for the triangle part so we can do 50 for each pulse not including delay
-    a = np.linspace(0,1,resolution, endpoint=False) #end at 0.9
-    b = np.linspace(1,-1,2*resolution, endpoint=False) #ends at -0.9
-    c = np.linspace(-1, 0, resolution, endpoint=False) #doesnt include 0 at the end because thats more than a full cycle
-    triangle_wf = np.concatenate((a,b,c))
-    up_pulse = np.concatenate((np.linspace(0,1,resolution, endpoint=False), np.linspace(1,0, resolution, endpoint=False)))
-    down_pulse = np.concatenate((np.linspace(0,-1,resolution, endpoint=False), np.linspace(-1,0, resolution, endpoint=False)))
-
-    delay_arr = np.array([0] * num_points_delay)
-    
-    dwm_wf = np.concatenate((triangle_wf, delay_arr, up_pulse, delay_arr, up_pulse, delay_arr, down_pulse, delay_arr, down_pulse, delay_arr))
-    '''
-    ratio = int(pulse_delay/pulse_width) #this tells us how much longer the pulse width is careful cuz its rounding to nearest int btw
-    delay_list = [0] * ratio
-    pulse_1 = [-1, 0] + delay_list
-    pulse_2 = [1, 0] + delay_list
-    pulse_3 = [1, 0] + delay_list
-    pulse_4 = [-1, 0] + delay_list
-    pulse_5 = [-1, 0] + delay_list
-    PUND_wf = pulse_1 + pulse_2 + pulse_3 + pulse_4 + pulse_5
-    scale_factor = 5
-    index = 0
-    scaled_PUND_wf = PUND_wf[:]
-    for i in range(len(PUND_wf)):
-        value = PUND_wf[i]
-        to_be_inserted = [value]*scale_factor 
-        scaled_PUND_wf[index:index] = to_be_inserted
-        index += 5
-    scaled_PUND_wf = scaled_PUND_wf[:-len(PUND_wf)] #this removes original from the list
-
-    total_wf_len = 10*(pulse_width) + 5*(pulse_delay) #see img for reasoning
-    freq = 1/total_wf_len
-    return scaled_PUND_wf, freq, total_wf_len'''
-    return dwm_wf
+    total_time = 5*pulse_delay + 6*pulse_width
+    freq = 1/total_time
+    return full_wf, freq, total_time
 
 
 
 
-def run_function(scope, wavegen, pulse_width, pulse_delay, voltage_max, num_points=20, step_size=None, capacitor_area=None, thickness=None, permittivity=None,
+def run_function(scope, wavegen, pulse_width, pulse_delay, voltage, capacitor_area=None, thickness=None, permittivity=None,
                  voltage_channel:str='1', current_channel:str='2'):
     """Run function for PUND PV Curve expirement.
 
@@ -146,17 +104,15 @@ def run_function(scope, wavegen, pulse_width, pulse_delay, voltage_max, num_poin
         scope (pyvisa.resources.gpib.GPIBInstrument): Keysight DSOX3024A
         pulse_width (str): Pulse width in seconds (see img for more information)
         pulse_delay (str): Pulse delay in seconds (see img for more information)
-        voltage_max (str): Voltage in units of volts where the program should end
-        num_points (str): Total number of data points for PV plot, optional default is 20
-        step_size (str): Step size in volts, optional if not given uses num_points
+        voltage (str): Voltage in units of volts where the program should end
         capacitor_area (str): In units of m^2 use scientific notation (maybe add logic for suffixes)
         thickness (str): In units of m use scientific notation
         permittivity (str): Dielectric constant, gets multiplied by epsilon_0
     returns:
-        (PUND): Experiment
+        (DWM): Experiment
         
         
-        notes: wip
+        notes: wip but getting there, analysis part will be a pain
     
     """
 
@@ -164,12 +120,10 @@ def run_function(scope, wavegen, pulse_width, pulse_delay, voltage_max, num_poin
     meta_data = locals() #this just passes in all the arguments from the run function
     del meta_data['scope'], meta_data['wavegen'], meta_data['voltage_channel'], meta_data['current_channel']
     capacitance = float(capacitor_area)*float(permittivity)*8.854e-12/float(thickness)
-    PUND_wf, freq, total_wf_len = create_PUND_wf(pulse_width, pulse_delay)
-    voltage_channel_scale = 1 #note will change later once i implement actual loop lol
-    voltage = 1
-    setup_scope(scope, total_wf_len, voltage_channel, current_channel, f'{voltage_channel_scale}')
+    DWM_wf, freq, total_wf_len = create_DWM_wf(float(pulse_width), float(pulse_delay))
+    setup_scope(scope, total_wf_len, voltage_channel, current_channel, voltage)
 
-    setup_wavegen(wavegen, voltage_channel, current_channel, PUND_wf, freq, voltage)
+    setup_wavegen(wavegen, voltage_channel, current_channel, DWM_wf, freq, voltage)
 
     keysightdsox3024a.initiate(scope)
     keysight81150a.enable_output(wavegen)
@@ -186,12 +140,12 @@ def run_function(scope, wavegen, pulse_width, pulse_delay, voltage_max, num_poin
     meta_data.update(metadata_c)
     #How to structure the data that comes out, its going to be in a pandas df, but how. Kind of want to make it nested with raw and pv but idk
     df = pd.DataFrame({'time_v':time_v, 'wfm_v':wfm_v, 'time_c':time_c, 'wfm_c':wfm_c})
-    base_name = 'fe_PUND_PV_'
+    base_name = 'fe_DWM_'
     return base_name, meta_data, df
 
 
-class PUNDPVCurve(core.experiment):
-    """Experiment class for running a PUND PV curve.
+class DWM(core.experiment):
+    """Experiment class for running a DWM curve.
 
     args:
         wavegen (pyvisa.resources.gpib.GPIBInstrument): Keysight 81150a

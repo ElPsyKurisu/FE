@@ -13,6 +13,8 @@ PLOT_AGAINST is optional paramater that says what to plot against, otherwise we 
 WOULD LIKE TO ADD A METHOD WHERE BY CONVENTION THE LAST FUNCTION IS WHERE YOU DEFINE YOUR PLOTTING FUNCTION FOR THE FINAL RESULT BUT IT
 DOESNT MESS UP WHAT IVE ADDED ALREADY turns out you can add it whenever in the flow and it will not error (note needed to update ekpy for this)
 
+WILL ERROR if **kwargs is not included in function since it passes defn by default, can add a toggle later to use analysis
+
 '''
 
 import numpy as np

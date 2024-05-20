@@ -21,7 +21,7 @@ from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 
 
-__all__ = ('find_peaks_troughs_index_start_and_end', 'find_peaks_troughs_index_start', 'generate_q_wfm', 'drift_correct_q', 'plot',)
+__all__ = ('find_peaks_troughs_index_start_and_end', 'generate_q_values', 'get_remanant_polarization',)
 
 
 def find_peaks_troughs_index_start_and_end(data_dict, **kwargs)->'dict':
@@ -38,7 +38,8 @@ def find_peaks_troughs_index_start_and_end(data_dict, **kwargs)->'dict':
     data_dict: dict
         The mutated dictionary with the start and end of the pulses added.
 
-    MODIFIES: start_and_end_pulse"""
+    MODIFIES: start_and_end_pulse
+    """
     arr = data_dict['wfm_v']
     arr_normalized = np.abs(2 * ((arr - np.min(arr)) / (np.max(arr) - np.min(arr))) - 1)
     my_signal = np.abs(arr_normalized)
@@ -61,6 +62,7 @@ def generate_q_values(data_dict, **kwargs) -> 'dict':
         The data_dict key containing the time wf
     Returns
     -------
+    SKIP_PLOT
     data_dict: dict
         The mutated dictionary with the q_vals added.
     MODIFIES: q_vals"""
@@ -80,7 +82,6 @@ def generate_q_values(data_dict, **kwargs) -> 'dict':
     q3r = it.trapezoid(data_dict['wfm_c'][start_and_end_pulse[5]+1:start_and_end_pulse[5]+pulse_index_len + 1], dx=t_increment)
     q4r = it.trapezoid(data_dict['wfm_c'][start_and_end_pulse[7]+1:start_and_end_pulse[7]+pulse_index_len + 1], dx=t_increment)
 
-
     data_dict['q_vals'] = np.array([q1, q1r, q2, q2r, q3, q3r, q4, q4r])
     return data_dict
 
@@ -95,6 +96,7 @@ def get_remanant_polarization(data_dict, **kwargs) -> 'dict':
         The data_dict key containing the charge values
     Returns
     -------
+    SKIP_PLOT
     data_dict: dict
         The mutated dictionary with the q_vals added.
     MODIFIES: calc_vals"""
@@ -104,6 +106,8 @@ def get_remanant_polarization(data_dict, **kwargs) -> 'dict':
     dp34 = q_vals[4] - q_vals[6]
     dp3r4r = q_vals[5] - q_vals[7]
     data_dict['calc_vals'] = np.array([dp12, dp1r2r, dp34, dp3r4r])
+
+    return data_dict
 
 """
 Helper Functions go here

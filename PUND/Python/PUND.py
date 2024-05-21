@@ -18,8 +18,6 @@ positive and two negative pulses
 channel 2 of the wavegen in parallel with the sample which is in series with channel 2 of the scope. AKA connect channel 2 of the wavegen to port A via
 BNC and connect channel 2 of the scope to port B also via BNC (no bannannas needed)
 
-Will work the same way where there will be a timing issue between the two waveforms but oh well which
-probably causes the slope issue I have with PV loops
 """
 
 def setup_scope(scope, time_range, voltage_channel, current_channel,
@@ -76,7 +74,7 @@ def create_PUND_wf(pulse_width, pulse_delay):
 
 
 
-def run_function(scope, wavegen, pulse_width, pulse_delay, voltage_max, num_points=20, step_size=None, capacitor_area=None, thickness=None, permittivity=None,
+def run_function(scope, wavegen, pulse_width, pulse_delay, voltage_max, num_points='20', step_size=None, capacitor_area=None, thickness=None, permittivity=None,
                  voltage_channel:str='1', current_channel:str='2'):
     """Run function for PUND PV Curve expirement.
 
@@ -104,6 +102,14 @@ def run_function(scope, wavegen, pulse_width, pulse_delay, voltage_max, num_poin
     del meta_data['scope'], meta_data['wavegen'], meta_data['voltage_channel'], meta_data['current_channel']
     capacitance = float(capacitor_area)*float(permittivity)*8.854e-12/float(thickness)
     PUND_wf, freq, total_wf_len = create_PUND_wf(pulse_width, pulse_delay)
+
+    #start making the loop here note seems easier to modify analysis and just use built in looping no?
+    if step_size is not None:
+        num_points = int(float(voltage_max)/float(step_size))
+    else:
+        num_points = float(num_points)
+    voltage_points = np.linspace(step_size, voltage_max, num_points, endpoint=True)
+    #for voltage in voltage_points:
     voltage_channel_scale = 1 #note will change later once i implement actual loop lol
     voltage = 1
     setup_scope(scope, total_wf_len, voltage_channel, current_channel, f'{voltage_channel_scale}')
@@ -116,7 +122,7 @@ def run_function(scope, wavegen, pulse_width, pulse_delay, voltage_max, num_poin
     keysight81150a.send_software_trigger(wavegen)
     scope.query("*OPC?")
     keysightdsox3024a.setup_wf(scope, source='CHAN1')
-    metadata_v, time_v, wfm_v = keysightdsox3024a.query_wf(scope) #currently times out here
+    metadata_v, time_v, wfm_v = keysightdsox3024a.query_wf(scope) 
     meta_data.update(metadata_v)
     time.sleep(.2)
     keysightdsox3024a.setup_wf(scope, source='CHAN2')
@@ -125,11 +131,11 @@ def run_function(scope, wavegen, pulse_width, pulse_delay, voltage_max, num_poin
     meta_data.update(metadata_c)
     #How to structure the data that comes out, its going to be in a pandas df, but how. Kind of want to make it nested with raw and pv but idk
     df = pd.DataFrame({'time_v':time_v, 'wfm_v':wfm_v, 'time_c':time_c, 'wfm_c':wfm_c})
-    base_name = 'fe_PUND_PV_'
+    base_name = 'fe_PUND_'
     return base_name, meta_data, df
 
 
-class PUNDPVCurve(core.experiment):
+class PUND(core.experiment):
     """Experiment class for running a PUND PV curve.
 
     args:

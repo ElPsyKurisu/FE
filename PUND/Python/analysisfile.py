@@ -21,7 +21,7 @@ from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 
 
-__all__ = ('find_peaks_troughs_index_start_and_end', 'generate_q_values', 'get_remanant_polarization',)
+__all__ = ('find_peaks_troughs_index_start_and_end', 'generate_q_values', 'get_remanant_polarization', 'plot',)
 
 
 def find_peaks_troughs_index_start_and_end(data_dict, **kwargs)->'dict':
@@ -89,6 +89,7 @@ def get_remanant_polarization(data_dict, **kwargs) -> 'dict':
     """
     Adds 'calc_vals' to the given data_dict by subtracting relevant ones. Returns a list of values
     corresponding to the 8 measuremnts as described by Radiant used in PUND, p1, p1r, p2, p2r, p3, p3r, p4, p4r
+    All 4 values should give very similar results so should just average to plot?
     NOTE STILL ONLY CHARGE NOT POLARIZATION HAVENT SCALED IT PROPERLY
     Requirements
     ------------
@@ -108,6 +109,52 @@ def get_remanant_polarization(data_dict, **kwargs) -> 'dict':
     data_dict['calc_vals'] = np.array([dp12, dp1r2r, dp34, dp3r4r])
 
     return data_dict
+
+def plot(data_dict, **kwargs) -> None:
+    """
+    Scatter 'voltage_max' vs average of 'calc_vals' to make a PV plot.
+    maybe if i pass in the ax, it can plot from each?
+
+    Requirements
+    ------------
+    calc_vals: dict key 
+        The data_dict key containing the calulcated polarizations
+    wfm_v: dict key
+        The data_dict key containing the voltage wf
+    Returns
+    -------
+    None
+    PLOT_AGAINST: None
+    MODIFIES: None"""
+    polarization_val_pos = np.mean(np.abs(data_dict['calc_vals'][:2]))
+    polarization_val_neg = np.mean(np.abs(data_dict['calc_vals'][2:])) #type array can do this or get a negative and positive one aka use first two to average one and last 2 for the negative one
+    polarization_val = [polarization_val_pos, polarization_val_neg]
+    voltage = list(kwargs['voltage_max'])[0]
+    plt.scatter(voltage, polarization_val[0])
+    plt.scatter(-voltage, -polarization_val[1])
+    plt.title('PUND PV')
+    plt.xlabel('Voltage (V)')
+    plt.ylabel('Charge Q')
+   
+    '''
+    start_and_end_pulse = data_dict['start_and_end_pulse']
+    i = 0
+    start = start_and_end_pulse[0]
+    end = start_and_end_pulse[1]
+    y_arr = data_dict['wfm_q']
+    x_arr = data_dict['wfm_v']
+    max = np.max(y_arr[start:end])
+    while i < len(start_and_end_pulse):
+        start = start_and_end_pulse[i]
+        end = start_and_end_pulse[i+1]
+        other_max = np.max(y_arr[start:end])
+        y_offset = max - other_max
+        y_arr[start:end] += y_offset
+        plt.plot(x_arr[start:end], y_arr[start:end])
+        i += 2
+    plt.title('PV Loops')
+    plt.xlabel('Voltage (V)')
+    plt.ylabel('Charge Q')'''
 
 """
 Helper Functions go here

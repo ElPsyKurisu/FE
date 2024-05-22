@@ -136,25 +136,6 @@ def plot(data_dict, **kwargs) -> None:
     plt.xlabel('Voltage (V)')
     plt.ylabel('Charge Q')
    
-    '''
-    start_and_end_pulse = data_dict['start_and_end_pulse']
-    i = 0
-    start = start_and_end_pulse[0]
-    end = start_and_end_pulse[1]
-    y_arr = data_dict['wfm_q']
-    x_arr = data_dict['wfm_v']
-    max = np.max(y_arr[start:end])
-    while i < len(start_and_end_pulse):
-        start = start_and_end_pulse[i]
-        end = start_and_end_pulse[i+1]
-        other_max = np.max(y_arr[start:end])
-        y_offset = max - other_max
-        y_arr[start:end] += y_offset
-        plt.plot(x_arr[start:end], y_arr[start:end])
-        i += 2
-    plt.title('PV Loops')
-    plt.xlabel('Voltage (V)')
-    plt.ylabel('Charge Q')'''
 
 """
 Helper Functions go here

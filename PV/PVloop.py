@@ -85,7 +85,7 @@ def setup_scope(scope, time_scale, voltage_channel, current_channel,
     keysightdsox3024a.initialize(scope)
     keysightdsox3024a.configure_timebase(scope, time_base_type='MAIN', reference='CENTer', scale=f'{time_scale}', position=f'{5*time_scale}')
     keysightdsox3024a.configure_channel(scope, channel=voltage_channel, vertical_scale=voltage_scale, impedance='FIFT')#set both to 50ohm
-    keysightdsox3024a.configure_channel(scope, channel=current_channel, vertical_scale=voltage_scale, impedance='FIFT')
+    keysightdsox3024a.configure_channel(scope, channel=current_channel, vertical_scale=voltage_scale, impedance='FIFT') #use ONEM if using the 50ohm feedthrough
     #NOTE changing the position now to 5* the timebase to hopefully get the full signal
     keysightdsox3024a.configure_trigger_characteristics(scope, trigger_source='EXT', low_voltage_level='0.75', high_voltage_level='0.95', sweep='NORM')
     keysightdsox3024a.configure_trigger_edge(scope, trigger_source='EXT', input_coupling='DC')

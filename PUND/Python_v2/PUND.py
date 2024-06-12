@@ -39,8 +39,8 @@ def setup_wavegen(wavegen, voltage_channel, current_channel, wf, waveform_freq, 
     keysight81150a.configure_impedance(wavegen, current_channel, source_impedance='50.0', load_impedance='1e6')
     keysight81150a.configure_trigger(wavegen, voltage_channel, source='MAN')
     keysight81150a.create_arb_wf(wavegen, wf, 'PUND') #does not work with volatile
-    keysight81150a.configure_arb_wf(wavegen, voltage_channel, 'PUND', gain=f'{voltage*4}', freq=f'{waveform_freq}')
-    keysight81150a.configure_arb_wf(wavegen, current_channel, 'PUND', gain=f'{voltage*4}', freq=f'{waveform_freq}')
+    keysight81150a.configure_arb_wf(wavegen, voltage_channel, 'PUND', gain=f'{voltage*2}', freq=f'{waveform_freq}')
+    keysight81150a.configure_arb_wf(wavegen, current_channel, 'PUND', gain=f'{voltage*2}', freq=f'{waveform_freq}')
 
 
 def create_PUND_wf(pulse_width, pulse_delay):
@@ -106,7 +106,7 @@ def run_function(scope, wavegen, pulse_width, pulse_delay, voltage_max, num_poin
     capacitance = float(capacitor_area)*float(permittivity)*8.854e-12/float(thickness)
     PUND_wf, freq, total_wf_len = create_PUND_wf(pulse_width, pulse_delay)
     voltage_channel_scale = 1 #note will change later once i implement actual loop lol
-    voltage = 1
+    voltage = float(voltage_max)
     setup_scope(scope, total_wf_len, voltage_channel, current_channel, f'{voltage_channel_scale}')
 
     setup_wavegen(wavegen, voltage_channel, current_channel, PUND_wf, freq, voltage)
@@ -116,11 +116,11 @@ def run_function(scope, wavegen, pulse_width, pulse_delay, voltage_max, num_poin
     keysight81150a.enable_output(wavegen, '2')
     keysight81150a.send_software_trigger(wavegen)
     scope.query("*OPC?")
-    keysightdsox3024a.setup_wf(scope, source='CHAN1')
-    metadata_v, time_v, wfm_v = keysightdsox3024a.query_wf(scope) #currently times out here
+    keysightdsox3024a.setup_wf(scope, source='CHAN1', points_mode='MAX', points='100000')
+    metadata_v, time_v, wfm_v = keysightdsox3024a.query_wf(scope) 
     meta_data.update(metadata_v)
     time.sleep(.2)
-    keysightdsox3024a.setup_wf(scope, source='CHAN2')
+    keysightdsox3024a.setup_wf(scope, source='CHAN2', points_mode='MAX', points='100000')
     metadata_c, time_c, wfm_c = keysightdsox3024a.query_wf(scope)
 
     meta_data.update(metadata_c)

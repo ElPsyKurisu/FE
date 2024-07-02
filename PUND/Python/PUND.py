@@ -112,7 +112,7 @@ def run_function(scope, wavegen, pulse_width, pulse_delay, voltage_max, num_poin
     voltage_points = np.linspace(step_size, voltage_max, num_points, endpoint=True)
     #for voltage in voltage_points:
     '''
-    voltage_channel_scale = float(voltage_max)/3 #note will change later once i implement actual loop lol
+    voltage_channel_scale = float(voltage_max)/3 
     voltage = float(voltage_max)
     setup_scope(scope, total_wf_len, voltage_channel, current_channel, f'{voltage_channel_scale}', voltage)
 

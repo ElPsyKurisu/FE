@@ -77,7 +77,7 @@ def pv_hysteresis_wf(initial_delay, freq, pulse_delay, qtimepoints=12):
     temp = interpolate.interp1d(time_array, voltage_array)
     interp_voltage_array = temp(interp_time)
     #only thing we use from this is interp_voltage_array wtf
-    plt.plot(interp_time, interp_voltage_array)
+    #plt.plot(interp_time, interp_voltage_array)
     return q_time, time_array, waveform_freq, interp_time, interp_voltage_array
 
 def setup_scope(scope, time_scale, voltage_channel, current_channel,

@@ -117,7 +117,7 @@ def generate_dwm_wfm(data_dict) -> 'dict': #will error here since the plot again
     start_and_end_pulse = data_dict['start_and_end_pulse']
     pos = wfm_q[start_and_end_pulse[0][0]:start_and_end_pulse[0][1]] - wfm_q[start_and_end_pulse[1][0]:start_and_end_pulse[1][1]]
     neg = wfm_q[start_and_end_pulse[2][0]:start_and_end_pulse[2][1]] - wfm_q[start_and_end_pulse[3][0]:start_and_end_pulse[3][1]]
-    wfm_dwm = np.concatenate(pos, neg) #can argue if i should also put the actual voltage there or we use the same one for all four?
+    wfm_dwm = np.concatenate([pos, neg]) #can argue if i should also put the actual voltage there or we use the same one for all four?
     data_dict['wfm_dwm'] = wfm_dwm
     return data_dict
 
@@ -142,7 +142,7 @@ def generate_primary_wfm(data_dict) -> 'dict':
     start_and_end_pulse = data_dict['start_and_end_pulse']
     pos = wfm_q[start_and_end_pulse[0][0]:start_and_end_pulse[0][1]]
     neg = wfm_q[start_and_end_pulse[2][0]:start_and_end_pulse[2][1]] 
-    wfm_primary = np.concatenate(pos, neg) #can argue if i should also put the actual voltage there or we use the same one for all four?
+    wfm_primary = np.concatenate([pos, neg]) #can argue if i should also put the actual voltage there or we use the same one for all four?
     data_dict['wfm_primary'] = wfm_primary
     return data_dict
 
@@ -167,7 +167,7 @@ def generate_secondary_wfm(data_dict) -> 'dict':
     start_and_end_pulse = data_dict['start_and_end_pulse']
     pos = wfm_q[start_and_end_pulse[1][0]:start_and_end_pulse[1][1]]
     neg = wfm_q[start_and_end_pulse[3][0]:start_and_end_pulse[3][1]] 
-    wfm_secondary = np.concatenate(pos, neg) #can argue if i should also put the actual voltage there or we use the same one for all four?
+    wfm_secondary = np.concatenate([pos, neg]) #can argue if i should also put the actual voltage there or we use the same one for all four?
     data_dict['wfm_secondary'] = wfm_secondary
     return data_dict
 
@@ -226,24 +226,25 @@ def plot(data_dict) -> None:
     PLOT_AGAINST: None
     MODIFIES: None"""
     wfm_v = data_dict['wfm_v']
+    wfm_dwm = data_dict['wfm_dwm']
+    wfm_primary = data_dict['wfm_primary']
+    wfm_secondary = data_dict['wfm_secondary']
     start_and_end_pulse = data_dict['start_and_end_pulse']
-    modified_v_arr = wfm_v[start_and_end_pulse[0][0]]
-    i = 0
-    start = start_and_end_pulse[0]
-    end = start_and_end_pulse[1]
-    y_arr = data_dict['wfm_q']
-    x_arr = data_dict['wfm_v']
-    max = np.max(y_arr[start:end])
-    while i < len(start_and_end_pulse):
-        start = start_and_end_pulse[i]
-        end = start_and_end_pulse[i+1]
-        other_max = np.max(y_arr[start:end])
-        y_offset = max - other_max
-        y_arr[start:end] += y_offset
-        plt.plot(x_arr[start:end], y_arr[start:end])
-        i += 2
-    plt.title('PV Loops')
-    plt.xlabel('Voltage (V)')
-    plt.ylabel('Charge Q')
+    wfm_v_small = np.concatenate([wfm_v[start_and_end_pulse[0][0]:start_and_end_pulse[0][1]],wfm_v[start_and_end_pulse[2][0]:start_and_end_pulse[2][1]]]) #gets us the third one
+    fig, ax = plt.subplots()
+    ax.title("DWM Method PV")
+    ax.ylabel("Charge Q")
+    ax.xlabel("Voltage (V)")
+    ax.plot(wfm_v_small, wfm_dwm)
+
+    fig1, ax1 = plt.subplots()
+    ax1.title("Combined DWM, Primary, Secondary")
+    ax1.ylabel("Charge Q")
+    ax1.xlabel("Voltage (V)")
+    ax1.plot(wfm_v_small, wfm_dwm, label='DWM')
+    ax1.plot(wfm_v_small, wfm_primary, linestyle='-', label='Primary')
+    ax1.plot(wfm_v_small, wfm_secondary, linestyle='--', label='Secondary')
+    ax1.legend()
+
 
 

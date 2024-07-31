@@ -36,7 +36,6 @@ BNC and connect channel 2 of the scope to port B also via BNC (no bannannas need
 """
 NOTE TO BE DELETED JUST MY NOTES FOR WHAT TO DO
 
-First write code to make correct wf, looking at triangle waveform 1 cycle then 4 pulses with a delay.
 """
 
 
@@ -66,6 +65,7 @@ def create_DWM_wf(pulse_width, pulse_delay):
     to have an external file hold the DWM wf and gives us the frequnecy
     Returns the full_wf file as well as the required frequency to setup the wavegen with, note hardcoded
     100 so if pulse_delay and pulse_width are too far apart we can have problems
+    NOTE: Triangle version not sinusoidal like paper
     """
     ratio = pulse_width/pulse_delay
 

@@ -130,11 +130,11 @@ def run_function(scope, wavegen, pulse_width, pulse_delay, voltage, capacitor_ar
     keysight81150a.enable_output(wavegen, '2')
     keysight81150a.send_software_trigger(wavegen)
     scope.query("*OPC?")
-    keysightdsox3024a.setup_wf(scope, source='CHAN1')
+    keysightdsox3024a.setup_wf(scope, source='CHAN1', points_mode='MAX', points='100000')
     metadata_v, time_v, wfm_v = keysightdsox3024a.query_wf(scope) #currently times out here
     meta_data.update(metadata_v)
     time.sleep(.2)
-    keysightdsox3024a.setup_wf(scope, source='CHAN2')
+    keysightdsox3024a.setup_wf(scope, source='CHAN2', points_mode='MAX', points='100000')
     metadata_c, time_c, wfm_c = keysightdsox3024a.query_wf(scope)
 
     meta_data.update(metadata_c)

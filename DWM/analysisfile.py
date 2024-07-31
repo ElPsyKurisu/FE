@@ -21,7 +21,7 @@ from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 
 
-__all__ = ('find_peaks_troughs_index', 'start_and_end_pulse', 'generate_q_wfm', 'drift_correct_q', 'plot',)
+__all__ = ('find_peaks_troughs_index', 'start_and_end_pulse', 'generate_q_wfm', 'drift_correct_q','generate_wfm_v_piecewise', 'generate_dwm_wfm', 'generate_primary_wfm', 'generate_secondary_wfm', 'plot',)
 
 
 def find_peaks_troughs_index(data_dict)->'dict':
@@ -40,15 +40,17 @@ def find_peaks_troughs_index(data_dict)->'dict':
     MODIFIES: peaks"""
     arr = data_dict['wfm_v']
     arr_normalized = 2 * ((arr - np.min(arr)) / (np.max(arr) - np.min(arr))) - 1
-    peaks, _ = find_peaks(arr_normalized, height=0.8)
-    troughs, _ = find_peaks(-1*arr_normalized, height=0.8)
+    distance_between_peaks = len(arr)/10
+    peaks, _ = find_peaks(arr_normalized, height=0.95, distance=distance_between_peaks)
+    troughs, _ = find_peaks(-1*arr_normalized, height=0.95, distance=distance_between_peaks)
     all_peaks = np.concatenate((peaks, troughs), axis=0)
     data_dict['peaks'] = np.sort(all_peaks)
     return data_dict
 
 def start_and_end_pulse(data_dict)->'dict':
     """
-    Adds 'start_and_end_pulse' to the given data_dict by using the first two peaks to determine peak width.
+    Adds 'start_and_end_pulse' to the given data_dict by using the first two peaks to determine peak width. Format
+    is start1, end1, start2...
 
     Requirements
     ------------
@@ -65,15 +67,15 @@ def start_and_end_pulse(data_dict)->'dict':
     if len(x) != 6:
         print("Error found {} peaks instead of 6".format(len(x))) #change to error
     pulse_width = x[1] - x[0]
-    start_1 = x[2] - pulse_width/2
-    end_1 = x[2] + pulse_width/2
-    start_2 = x[3] - pulse_width/2
-    end_2 = x[3] + pulse_width/2
-    start_3 = x[4] - pulse_width/2
-    end_3 = x[4] + pulse_width/2
-    start_4 = x[5] - pulse_width/2
-    end_4 = x[5] + pulse_width/2    
-    data_dict['start_and_end_pulse'] = np.array([(start_1, end_1), (start_2, end_2), (start_3, end_3), (start_4, end_4)])
+    start_1 = int(x[2] - pulse_width/2)
+    end_1 = int(x[2] + pulse_width/2)
+    start_2 = int(x[3] - pulse_width/2)
+    end_2 = int(x[3] + pulse_width/2)
+    start_3 = int(x[4] - pulse_width/2)
+    end_3 = int(x[4] + pulse_width/2)
+    start_4 = int(x[5] - pulse_width/2)
+    end_4 = int(x[5] + pulse_width/2)
+    data_dict['start_and_end_pulse'] = np.array([start_1, end_1, start_2, end_2, start_3, end_3, start_4, end_4]) #cannot make multidimensional
     return data_dict
 
 def generate_q_wfm(data_dict) -> 'dict':
@@ -94,81 +96,6 @@ def generate_q_wfm(data_dict) -> 'dict':
     MODIFIES: wfm_q"""
     wfm_q = it.cumulative_trapezoid(data_dict['wfm_c'], data_dict['time_c'], initial=0) 
     data_dict['wfm_q'] = wfm_q
-    return data_dict  
-
-def generate_dwm_wfm(data_dict) -> 'dict': #will error here since the plot against is wrong
-    """
-    Generates piecewise Q waveform by subtracting Pulse 1 from 2 and 3 from 4.
-
-    Requirements
-    ------------
-    wfm_q: dict key 
-        The data_dict key containing the current wf
-    time_c: dict key
-        The data_dict key containing the time wf
-    start_and_end_pulse: dict key 
-        The data_dict key containing the start and end of the pulses
-    Returns
-    -------
-    data_dict: dict
-        The mutated dictionary with the q_wfm added.
-    MODIFIES: wfm_dwm"""
-    wfm_q = data_dict['wfm_q']
-    start_and_end_pulse = data_dict['start_and_end_pulse']
-    pos = wfm_q[start_and_end_pulse[0][0]:start_and_end_pulse[0][1]] - wfm_q[start_and_end_pulse[1][0]:start_and_end_pulse[1][1]]
-    neg = wfm_q[start_and_end_pulse[2][0]:start_and_end_pulse[2][1]] - wfm_q[start_and_end_pulse[3][0]:start_and_end_pulse[3][1]]
-    wfm_dwm = np.concatenate([pos, neg]) #can argue if i should also put the actual voltage there or we use the same one for all four?
-    data_dict['wfm_dwm'] = wfm_dwm
-    return data_dict
-
-def generate_primary_wfm(data_dict) -> 'dict':
-    """
-    Generates piecewise Q waveform by stitching together pulse 1 and 3.
-
-    Requirements
-    ------------
-    wfm_q: dict key 
-        The data_dict key containing the current wf
-    time_c: dict key
-        The data_dict key containing the time wf
-    start_and_end_pulse: dict key 
-        The data_dict key containing the start and end of the pulses
-    Returns
-    -------
-    data_dict: dict
-        The mutated dictionary with the q_wfm added.
-    MODIFIES: wfm_primary"""
-    wfm_q = data_dict['wfm_q']
-    start_and_end_pulse = data_dict['start_and_end_pulse']
-    pos = wfm_q[start_and_end_pulse[0][0]:start_and_end_pulse[0][1]]
-    neg = wfm_q[start_and_end_pulse[2][0]:start_and_end_pulse[2][1]] 
-    wfm_primary = np.concatenate([pos, neg]) #can argue if i should also put the actual voltage there or we use the same one for all four?
-    data_dict['wfm_primary'] = wfm_primary
-    return data_dict
-
-def generate_secondary_wfm(data_dict) -> 'dict':
-    """
-    Generates piecewise Q waveform by stitching together pulse 2 and 4.
-
-    Requirements
-    ------------
-    wfm_q: dict key 
-        The data_dict key containing the current wf
-    time_c: dict key
-        The data_dict key containing the time wf
-    start_and_end_pulse: dict key 
-        The data_dict key containing the start and end of the pulses
-    Returns
-    -------
-    data_dict: dict
-        The mutated dictionary with the q_wfm added.
-    MODIFIES: wfm_secondary"""
-    wfm_q = data_dict['wfm_q']
-    start_and_end_pulse = data_dict['start_and_end_pulse']
-    pos = wfm_q[start_and_end_pulse[1][0]:start_and_end_pulse[1][1]]
-    neg = wfm_q[start_and_end_pulse[3][0]:start_and_end_pulse[3][1]] 
-    wfm_secondary = np.concatenate([pos, neg]) #can argue if i should also put the actual voltage there or we use the same one for all four?
-    data_dict['wfm_secondary'] = wfm_secondary
     return data_dict
 
 def drift_correct_q(data_dict)-> 'dict': #not sure if i should do here, but maybe? could change to drift_correct_all which does dwm, primary, and secondary (raw too?)
@@ -198,6 +125,122 @@ def drift_correct_q(data_dict)-> 'dict': #not sure if i should do here, but mayb
     for i in range(len(data_dict['wfm_q'])):
         wfm_q_drift_corrected.append(data_dict['wfm_q'][i]-(slope*data_dict['time_c'][i]))
     data_dict['wfm_q'] = wfm_q_drift_corrected
+    return data_dict
+
+def generate_wfm_v_piecewise(data_dict) -> 'dict':
+    """
+    Generates piecewise v waveform to be used in plotting DWM, Primary, and Secondary.
+
+    Requirements
+    ------------
+    wfm_v: dict key 
+        The data_dict key containing the voltage wf
+    start_and_end_pulse: dict key 
+        The data_dict key containing the start and end of the pulses
+    Returns
+    -------
+    data_dict: dict
+        The mutated dictionary with the wfm_dwm added.
+    MODIFIES: wfm_v_piecewise"""
+    wfm_v = data_dict['wfm_v']
+    start_and_end_pulse = data_dict['start_and_end_pulse']
+    wfm_v_piecewise = np.concatenate((wfm_v[start_and_end_pulse[0]:start_and_end_pulse[1]],wfm_v[start_and_end_pulse[4]:start_and_end_pulse[5]]))
+    data_dict['wfm_v_piecewise'] = wfm_v_piecewise
+    return data_dict
+
+def generate_dwm_wfm(data_dict) -> 'dict': 
+    """
+    Generates piecewise Q waveform by subtracting Pulse 1 from 2 and 3 from 4.
+
+    Requirements
+    ------------
+    wfm_q: dict key 
+        The data_dict key containing the current wf
+    time_c: dict key
+        The data_dict key containing the time wf
+    start_and_end_pulse: dict key 
+        The data_dict key containing the start and end of the pulses
+    Returns
+    -------
+    data_dict: dict
+        The mutated dictionary with the wfm_dwm added.
+    MODIFIES: wfm_dwm"""
+    wfm_q = data_dict['wfm_q']
+    start_and_end_pulse = data_dict['start_and_end_pulse']
+    pos = wfm_q[start_and_end_pulse[0]:start_and_end_pulse[1]] - wfm_q[start_and_end_pulse[2]:start_and_end_pulse[3]]
+    neg = wfm_q[start_and_end_pulse[4]:start_and_end_pulse[5]] - wfm_q[start_and_end_pulse[6]:start_and_end_pulse[7]]
+    wfm_dwm = np.concatenate((pos, neg)) #can argue if i should also put the actual voltage there or we use the same one for all four?
+    data_dict['wfm_dwm'] = wfm_dwm
+    return data_dict
+
+def shift_dwm_wfm(data_dict) -> 'dict':
+    """
+    Modifies the wfm_dwm waveform by adding an offset to the second half.
+
+    Requirements
+    ------------
+    wfm_dwm: dict key 
+        The data_dict key containing the dwm wf
+    start_and_end_pulse: dict key 
+        The data_dict key containing the start and end of the pulses
+    Returns
+    -------
+    data_dict: dict
+        The mutated dictionary with the wfm_dwm added.
+    MODIFIES: wfm_dwm"""
+    start_and_end_pulse = data_dict['start_and_end_pulse']
+    wfm_dwm = data_dict['wfm_dwm']
+    end_of_first_half = start_and_end_pulse[1] - start_and_end_pulse[0]
+    second_half = wfm_dwm[end_of_first_half:]
+
+def generate_primary_wfm(data_dict) -> 'dict':
+    """
+    Generates piecewise Q waveform by stitching together pulse 1 and 3.
+
+    Requirements
+    ------------
+    wfm_q: dict key 
+        The data_dict key containing the current wf
+    time_c: dict key
+        The data_dict key containing the time wf
+    start_and_end_pulse: dict key 
+        The data_dict key containing the start and end of the pulses
+    Returns
+    -------
+    data_dict: dict
+        The mutated dictionary with the wfm_primary added.
+    MODIFIES: wfm_primary"""
+    wfm_q = data_dict['wfm_q']
+    start_and_end_pulse = data_dict['start_and_end_pulse']
+    pos = wfm_q[start_and_end_pulse[0]:start_and_end_pulse[1]]
+    neg = wfm_q[start_and_end_pulse[4]:start_and_end_pulse[5]] 
+    wfm_primary = np.concatenate((pos, neg)) #can argue if i should also put the actual voltage there or we use the same one for all four?
+    data_dict['wfm_primary'] = wfm_primary
+    return data_dict
+
+def generate_secondary_wfm(data_dict) -> 'dict':
+    """
+    Generates piecewise Q waveform by stitching together pulse 2 and 4.
+
+    Requirements
+    ------------
+    wfm_q: dict key 
+        The data_dict key containing the current wf
+    time_c: dict key
+        The data_dict key containing the time wf
+    start_and_end_pulse: dict key 
+        The data_dict key containing the start and end of the pulses
+    Returns
+    -------
+    data_dict: dict
+        The mutated dictionary with the wfm_secondary added.
+    MODIFIES: wfm_secondary"""
+    wfm_q = data_dict['wfm_q']
+    start_and_end_pulse = data_dict['start_and_end_pulse']
+    pos = wfm_q[start_and_end_pulse[2]:start_and_end_pulse[3]]
+    neg = wfm_q[start_and_end_pulse[6]:start_and_end_pulse[7]] 
+    wfm_secondary = np.concatenate((pos, neg)) #can argue if i should also put the actual voltage there or we use the same one for all four?
+    data_dict['wfm_secondary'] = wfm_secondary
     return data_dict
 
 def plot(data_dict) -> None:
@@ -230,17 +273,17 @@ def plot(data_dict) -> None:
     wfm_primary = data_dict['wfm_primary']
     wfm_secondary = data_dict['wfm_secondary']
     start_and_end_pulse = data_dict['start_and_end_pulse']
-    wfm_v_small = np.concatenate([wfm_v[start_and_end_pulse[0][0]:start_and_end_pulse[0][1]],wfm_v[start_and_end_pulse[2][0]:start_and_end_pulse[2][1]]]) #gets us the third one
+    wfm_v_small = data_dict['wfm_v_piecewise']
     fig, ax = plt.subplots()
-    ax.title("DWM Method PV")
-    ax.ylabel("Charge Q")
-    ax.xlabel("Voltage (V)")
+    ax.set_title("DWM Method PV")
+    ax.set_ylabel("Charge Q")
+    ax.set_xlabel("Voltage (V)")
     ax.plot(wfm_v_small, wfm_dwm)
 
     fig1, ax1 = plt.subplots()
-    ax1.title("Combined DWM, Primary, Secondary")
-    ax1.ylabel("Charge Q")
-    ax1.xlabel("Voltage (V)")
+    ax1.set_title("Combined DWM, Primary, Secondary")
+    ax1.set_ylabel("Charge Q")
+    ax1.set_xlabel("Voltage (V)")
     ax1.plot(wfm_v_small, wfm_dwm, label='DWM')
     ax1.plot(wfm_v_small, wfm_primary, linestyle='-', label='Primary')
     ax1.plot(wfm_v_small, wfm_secondary, linestyle='--', label='Secondary')

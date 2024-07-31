@@ -22,7 +22,6 @@ import scipy.integrate as it
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 
-
 __all__ = ('find_peaks_troughs_index', 'start_and_end_pulse', 'generate_q_wfm', 'drift_correct_q', 'plot',)
 
 
